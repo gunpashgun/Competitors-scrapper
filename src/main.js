@@ -264,9 +264,9 @@ const crawlerOptions = {
                                 isNewDiscoveredCompetitor: true,
                                 scrapedAt: new Date().toISOString(),
                                 
-                                // Easy access arrays
-                                allImageUrls: mediaAssets.images.map(img => img.url),
-                                allVideoUrls: mediaAssets.videos.map(vid => vid.videoUrl).filter(Boolean),
+                                // Easy access arrays - only highest resolution
+                                allImageUrls: getHighestResolutionImages(mediaAssets.images),
+                                allVideoUrls: getHighestResolutionVideos(mediaAssets.videos),
                                 allThumbnailUrls: mediaAssets.thumbnails.map(thumb => thumb.url)
                             });
                         }
@@ -586,6 +586,64 @@ const crawlerOptions = {
                     if (media.images.some(img => img.isHighRes)) score += 2;
                     if (media.images.length > 1) score += 1;
                     return Math.min(score, 10);
+                }
+                
+                function getHighestResolutionImages(images) {
+                    if (!images || images.length === 0) return [];
+                    
+                    // Group images by position (carousel items)
+                    const imagesByPosition = {};
+                    images.forEach(img => {
+                        const pos = img.position || 0;
+                        if (!imagesByPosition[pos]) {
+                            imagesByPosition[pos] = [];
+                        }
+                        imagesByPosition[pos].push(img);
+                    });
+                    
+                    // For each position, select highest resolution
+                    const highestResImages = [];
+                    Object.values(imagesByPosition).forEach(positionImages => {
+                        const highest = positionImages.reduce((best, current) => {
+                            const bestResolution = (best.width || 0) * (best.height || 0);
+                            const currentResolution = (current.width || 0) * (current.height || 0);
+                            return currentResolution > bestResolution ? current : best;
+                        });
+                        if (highest && highest.url) {
+                            highestResImages.push(highest.url);
+                        }
+                    });
+                    
+                    return highestResImages;
+                }
+                
+                function getHighestResolutionVideos(videos) {
+                    if (!videos || videos.length === 0) return [];
+                    
+                    // Group videos by position
+                    const videosByPosition = {};
+                    videos.forEach(vid => {
+                        const pos = vid.position || 0;
+                        if (!videosByPosition[pos]) {
+                            videosByPosition[pos] = [];
+                        }
+                        videosByPosition[pos].push(vid);
+                    });
+                    
+                    // For each position, select highest resolution
+                    const highestResVideos = [];
+                    Object.values(videosByPosition).forEach(positionVideos => {
+                        const highest = positionVideos.reduce((best, current) => {
+                            const bestResolution = (best.width || 0) * (best.height || 0);
+                            const currentResolution = (current.width || 0) * (current.height || 0);
+                            return currentResolution > bestResolution ? current : best;
+                        });
+                        if (highest && highest.videoUrl) {
+                            highestResVideos.push(highest.videoUrl);
+                        }
+                    });
+                    
+                    return highestResVideos.filter(Boolean);
                 }
                 
                 return ads.slice(0, 25); // Return top discovered advertisers
