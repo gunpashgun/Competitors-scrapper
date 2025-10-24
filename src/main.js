@@ -35,7 +35,8 @@ console.log('✅ Code successfully loaded from GitHub');
 console.log('─────────────────────────────────────────────────────');
 if (useDirectUrls) {
     console.log(`📊 Mode: Direct competitor URLs (${competitorUrls.length} competitors)`);
-    console.log(`📋 Competitors: ${competitorUrls.map(c => c.name).join(', ')}`);
+    console.log(`🧪 TESTING MODE: Processing only first 3 competitors`);
+    console.log(`📋 Competitors: ${competitorUrls.slice(0, 3).map(c => c.name).join(', ')}`);
 } else {
     console.log(`📊 Search terms: ${searchTerms.join(', ')}`);
 }
@@ -755,7 +756,7 @@ const crawlerOptions = {
         }
     },
     
-    maxRequestsPerCrawl: useDirectUrls ? competitorUrls.length : searchTerms.length, // Process all competitors
+    maxRequestsPerCrawl: 3, // TESTING: Process only first 3 competitors
     maxConcurrency: 1,
     requestHandlerTimeoutSecs: 600 // Extended for discovery process
 };
