@@ -29,33 +29,15 @@ const searchTerms = searchTermsInput
 // Use competitorUrls if provided, otherwise fall back to search terms
 const useDirectUrls = competitorUrls && competitorUrls.length > 0;
 
-console.log('🚀 Algonova Kids EdTech Competitor Discovery (Ages 5-17)');
+console.log('🚀 Competitor Ads Scraper');
 if (useDirectUrls) {
     console.log(`📊 Mode: Direct competitor URLs (${competitorUrls.length} competitors)`);
     console.log(`📋 Competitors: ${competitorUrls.map(c => c.name).join(', ')}`);
 } else {
     console.log(`📊 Search terms: ${searchTerms.join(', ')}`);
 }
-console.log(`🎯 Goal: Discover ALL advertisers running successful kids EdTech ads`);
+console.log(`🎯 Goal: Collect ALL active ads from competitors`);
 console.log(`⏱️ Minimum active days: ${minActiveDays}`);
-
-// Kids EdTech content indicators (for validation, not filtering)
-const KIDS_EDTECH_INDICATORS = {
-    age_targets: ['anak', 'kids', 'children', 'SD', 'SMP', 'SMA', 'kelas', 'umur', 'usia'],
-    subjects: ['coding', 'programming', 'pemrograman', 'robotika', 'robotics', 'scratch', 
-               'matematika', 'math', 'stem', 'design', 'desain', 'digital literacy', 
-               'literasi digital', 'visual programming'],
-    education_terms: ['belajar', 'kursus', 'sekolah', 'pendidikan', 'edukasi', 'pembelajaran',
-                      'course', 'learning', 'education', 'study', 'training'],
-    locations: ['indonesia', 'jakarta', 'surabaya', 'bandung', 'medan', 'online indonesia']
-};
-
-// Content that should be excluded (not kids EdTech)
-const EXCLUDE_INDICATORS = [
-    'ai coding tools', 'developer api', 'anthropic', 'claude code', 'adult learning',
-    'professional development', 'enterprise', 'b2b', 'startup', 'meta ad library',
-    'facebook ads', 'social media marketing'
-];
 
 // Set up proxy if requested
 let proxyConfiguration = null;
@@ -172,16 +154,15 @@ const crawlerOptions = {
                 }
             }
             
-            console.log('🕵️ Discovering all kids EdTech advertisers...');
+            console.log('🕵️ Collecting all active ads...');
             
             // Reduced scrolling to save memory (was 20, now 10)
             await autoScroll(page, 10);
             await new Promise(resolve => setTimeout(resolve, 3000));
             
-            // DYNAMIC COMPETITOR DISCOVERY: Find ALL advertisers running kids EdTech ads
-            const discoveredAds = await page.evaluate((searchTermParam, indicators, excludeTerms, minDays) => {
+            // Collect ALL ads from the page (no filtering by quality)
+            const discoveredAds = await page.evaluate((searchTermParam, minDays, competitorName, directUrl) => {
                 const ads = [];
-                const foundAdvertisers = new Set(); // Track unique advertisers
                 
                 // Use standard CSS selectors only, then filter with JavaScript
                 const allContainers = [
@@ -223,25 +204,15 @@ const crawlerOptions = {
                         const mediaAssets = extractMediaAssets(container);
                         const activeDays = extractActiveDays(container);
                         
-                        // CORE LOGIC: Determine if this is a successful kids EdTech ad
-                        const adQuality = assessAdQuality(
-                            advertiserInfo, 
-                            adContent, 
-                            mediaAssets, 
-                            activeDays, 
-                            indicators, 
-                            excludeTerms, 
-                            minDays
-                        );
+                        // Simple filters: just check if we have basic data and meets min days
+                        const hasBasicData = advertiserInfo.name && 
+                                            advertiserInfo.name !== 'Unknown' &&
+                                            advertiserInfo.name !== 'Meta Ad Library' &&
+                                            adContent.text &&
+                                            adContent.text.length > 30 &&
+                                            activeDays >= minDays;
                         
-                        // Only include if it meets our success criteria AND we haven't seen this advertiser
-                        if (adQuality.isQualifiedAd && 
-                            !foundAdvertisers.has(advertiserInfo.name) &&
-                            advertiserInfo.name !== 'Unknown' &&
-                            advertiserInfo.name !== 'Meta Ad Library') {
-                            
-                            foundAdvertisers.add(advertiserInfo.name);
-                            
+                        if (hasBasicData) {
                             const kidsData = extractKidsEdTechData(adContent.text);
                             
                             ads.push({
@@ -271,17 +242,10 @@ const crawlerOptions = {
                                 activeDays: activeDays,
                                 meetsMinActiveDays: activeDays >= minDays,
                                 
-                                // Quality scores
-                                adQualityScore: adQuality.score,
-                                contentRelevanceScore: adQuality.contentRelevance,
-                                dataCompletenessScore: adQuality.dataCompleteness,
-                                mediaQualityScore: adQuality.mediaQuality,
-                                
                                 // Discovery metadata
                                 searchTerm: searchTermParam,
                                 competitorName: competitorName || searchTermParam,
-                                discoveryMethod: directUrl ? 'direct_url_discovery' : 'dynamic_competitor_discovery',
-                                isNewDiscoveredCompetitor: true,
+                                discoveryMethod: directUrl ? 'direct_url' : 'search_term',
                                 scrapedAt: new Date().toISOString(),
                                 
                                 // Easy access arrays - only highest resolution
@@ -462,63 +426,6 @@ const crawlerOptions = {
                     return Math.floor(Math.random() * 60) + 1;
                 }
                 
-                function assessAdQuality(advertiserInfo, adContent, mediaAssets, activeDays, indicators, excludeTerms, minDays) {
-                    const name = (advertiserInfo.name || '').toLowerCase();
-                    const text = (adContent.text || '').toLowerCase();
-                    const combined = name + ' ' + text;
-                    
-                    let score = 0;
-                    let contentRelevance = 0;
-                    let dataCompleteness = 0;
-                    let mediaQuality = 0;
-                    
-                    // 1. Content Relevance Check (0-40 points)
-                    // Must have kids education indicators
-                    const hasAgeTargets = indicators.age_targets.some(term => combined.includes(term));
-                    const hasSubjects = indicators.subjects.some(term => combined.includes(term));
-                    const hasEducationTerms = indicators.education_terms.some(term => combined.includes(term));
-                    
-                    if (hasAgeTargets) contentRelevance += 15;
-                    if (hasSubjects) contentRelevance += 15;
-                    if (hasEducationTerms) contentRelevance += 10;
-                    
-                    // Exclude non-relevant content
-                    const hasExcludeTerms = excludeTerms.some(term => combined.includes(term));
-                    if (hasExcludeTerms) contentRelevance = 0;
-                    
-                    score += contentRelevance;
-                    
-                    // 2. Data Completeness (0-30 points)
-                    if (advertiserInfo.name && advertiserInfo.name !== 'Unknown') dataCompleteness += 10;
-                    if (adContent.text && adContent.text.length > 50) dataCompleteness += 10;
-                    if (adContent.libraryId) dataCompleteness += 5;
-                    if (activeDays >= minDays) dataCompleteness += 5;
-                    
-                    score += dataCompleteness;
-                    
-                    // 3. Media Quality (0-30 points)
-                    if (mediaAssets.images.length > 0) mediaQuality += 10;
-                    if (mediaAssets.videos.length > 0) mediaQuality += 15;
-                    if (mediaAssets.images.some(img => img.isHighRes)) mediaQuality += 5;
-                    
-                    score += mediaQuality;
-                    
-                    // Qualification threshold: Must score at least 50/100 and meet minimum requirements
-                    const isQualifiedAd = score >= 50 && 
-                                         contentRelevance >= 20 && 
-                                         dataCompleteness >= 15 && 
-                                         activeDays >= minDays &&
-                                         (mediaAssets.images.length > 0 || mediaAssets.videos.length > 0);
-                    
-                    return {
-                        isQualifiedAd: isQualifiedAd,
-                        score: score,
-                        contentRelevance: contentRelevance,
-                        dataCompleteness: dataCompleteness,
-                        mediaQuality: mediaQuality
-                    };
-                }
-                
                 function extractKidsEdTechData(text) {
                     const lower = text.toLowerCase();
                     
@@ -666,9 +573,9 @@ const crawlerOptions = {
                     return highestResVideos.filter(Boolean);
                 }
                 
-                return ads.slice(0, 15); // Reduced from 25 to 15 to save memory
+                return ads.slice(0, 15); // Limit to 15 ads per competitor to save memory
                 
-            }, searchTerm, KIDS_EDTECH_INDICATORS, EXCLUDE_INDICATORS, minActiveDays);
+            }, searchTerm, minActiveDays, competitorName, directUrl);
             
             console.log(`🎯 Discovered ${discoveredAds.length} ads from "${displayName}"`);
             
@@ -677,26 +584,23 @@ const crawlerOptions = {
                 const advertisers = [...new Set(discoveredAds.map(ad => ad.advertiserName))];
                 console.log(`📋 Advertisers found: ${advertisers.join(', ')}`);
                 
-                // Add final enrichment
+                // Add basic enrichment
                 const enrichedAds = discoveredAds.map(ad => ({
                     ...ad,
-                    effectiveness_score: calculateEffectivenessScore(ad),
-                    content_type: categorizeContent(ad),
-                    age_focus: inferAgeGroup(ad),
-                    competitive_strength: assessCompetitiveStrength(ad),
-                    source: 'facebook_competitor_discovery',
+                    source: 'facebook_ads_library',
                     platform: 'facebook'
                 }));
                 
-                console.log(`✅ Successfully discovered ${enrichedAds.length} competitor ads from ${advertisers.length} unique advertisers`);
+                console.log(`✅ Successfully collected ${enrichedAds.length} ads from ${advertisers.length} unique advertisers`);
                 await Actor.pushData(enrichedAds);
             } else {
-                console.log(`⚠️ No qualifying advertisers found for "${searchTerm}"`);
+                console.log(`⚠️ No ads found for "${displayName}"`);
                 await Actor.pushData([{
                     error: false,
-                    searchTerm,
-                    message: `No advertisers met quality criteria (score ≥50, active ≥${minActiveDays} days, has media)`,
-                    resultType: 'no_qualifying_advertisers',
+                    searchTerm: searchTerm || competitorName,
+                    competitorName: displayName,
+                    message: `No ads found (active ≥${minActiveDays} days)`,
+                    resultType: 'no_ads_found',
                     scrapedAt: new Date().toISOString()
                 }]);
             }
@@ -736,49 +640,6 @@ if (proxyConfiguration) {
 }
 
 const crawler = new PuppeteerCrawler(crawlerOptions);
-
-// Helper functions for final enrichment
-function calculateEffectivenessScore(ad) {
-    let score = ad.adQualityScore / 10; // Convert to 0-10 scale
-    
-    // Bonus for high activity
-    if (ad.activeDays > 30) score += 1;
-    if (ad.activeDays > 60) score += 1;
-    
-    return Math.min(score, 10);
-}
-
-function categorizeContent(ad) {
-    const subjects = ad.courseSubjects ? ad.courseSubjects.join(' ').toLowerCase() : '';
-    
-    if (subjects.includes('coding') || subjects.includes('programming')) return 'coding_programming';
-    if (subjects.includes('scratch')) return 'visual_programming';
-    if (subjects.includes('robotics') || subjects.includes('robotika')) return 'robotics';
-    if (subjects.includes('math') || subjects.includes('matematika')) return 'mathematics';
-    if (subjects.includes('design')) return 'design';
-    
-    return 'general_kids_education';
-}
-
-function inferAgeGroup(ad) {
-    const ageText = ad.ageTargeting ? ad.ageTargeting.join(' ').toLowerCase() : '';
-    
-    if (ageText.includes('sd') || ageText.includes('kelas 1') || ageText.includes('kelas 2')) return 'elementary_5_11';
-    if (ageText.includes('smp') || ageText.includes('kelas 7') || ageText.includes('kelas 8')) return 'middle_school_12_14';
-    if (ageText.includes('sma') || ageText.includes('kelas 10') || ageText.includes('kelas 11')) return 'high_school_15_17';
-    
-    return 'all_ages_5_17';
-}
-
-function assessCompetitiveStrength(ad) {
-    let strength = 'medium';
-    
-    if (ad.adQualityScore >= 80 && ad.activeDays > 60) strength = 'high';
-    else if (ad.adQualityScore >= 90) strength = 'very_high';
-    else if (ad.adQualityScore < 60 || ad.activeDays < 14) strength = 'low';
-    
-    return strength;
-}
 
 async function autoScroll(page, maxScrolls = 15) {
     try {
@@ -852,13 +713,6 @@ async function exportToGoogleSheets(data, spreadsheetId, sheetName, serviceAccou
             'Course Subjects',
             'Offers',
             'Pricing Info',
-            'Quality Score',
-            'Content Relevance',
-            'Media Quality',
-            'Effectiveness Score',
-            'Content Type',
-            'Age Focus',
-            'Competitive Strength',
             'Search Term',
             'Scraped At',
             'Image URLs',
@@ -893,14 +747,7 @@ async function exportToGoogleSheets(data, spreadsheetId, sheetName, serviceAccou
                 Array.isArray(ad.courseSubjects) ? ad.courseSubjects.join(', ') : '',
                 Array.isArray(ad.offers) ? ad.offers.join(', ') : '',
                 Array.isArray(ad.pricingInfo) ? ad.pricingInfo.join(', ') : '',
-                ad.adQualityScore || 0,
-                ad.contentRelevanceScore || 0,
-                ad.mediaQualityScore || 0,
-                ad.effectiveness_score || 0,
-                ad.content_type || '',
-                ad.age_focus || '',
-                ad.competitive_strength || '',
-                ad.searchTerm || '',
+                ad.searchTerm || ad.competitorName || '',
                 ad.scrapedAt || '',
                 Array.isArray(ad.allImageUrls) ? ad.allImageUrls.join('\n') : '',
                 Array.isArray(ad.allVideoUrls) ? ad.allVideoUrls.join('\n') : ''
@@ -1074,8 +921,8 @@ if (useDirectUrls) {
 
 await crawler.run();
 
-console.log('🎉 Dynamic competitor discovery completed!');
-console.log('📊 Discovered all advertisers running successful kids EdTech ads');
+console.log('🎉 Competitor ads collection completed!');
+console.log('📊 Collected all active ads from specified competitors');
 
 // Export to Google Sheets if enabled
 if (enableGoogleSheets) {
