@@ -30,13 +30,12 @@ const searchTerms = searchTermsInput
 const useDirectUrls = competitorUrls && competitorUrls.length > 0;
 
 console.log('🚀 Competitor Ads Scraper');
-console.log('🔖 VERSION: 2025-10-24-v1.4 (Sorting + Translation + Text Wrap)');
+console.log('🔖 VERSION: 2025-10-24-v1.5 PRODUCTION READY');
 console.log('✅ Code successfully loaded from GitHub');
 console.log('─────────────────────────────────────────────────────');
 if (useDirectUrls) {
     console.log(`📊 Mode: Direct competitor URLs (${competitorUrls.length} competitors)`);
-    console.log(`🧪 TESTING MODE: Processing only first 3 competitors`);
-    console.log(`📋 Competitors: ${competitorUrls.slice(0, 3).map(c => c.name).join(', ')}`);
+    console.log(`📋 Processing: ${competitorUrls.map(c => c.name).join(', ')}`);
 } else {
     console.log(`📊 Search terms: ${searchTerms.join(', ')}`);
 }
@@ -763,7 +762,7 @@ const crawlerOptions = {
         }
     },
     
-    maxRequestsPerCrawl: 3, // TESTING: Process only first 3 competitors
+    maxRequestsPerCrawl: useDirectUrls ? competitorUrls.length : searchTerms.length, // Process all competitors
     maxConcurrency: 1,
     requestHandlerTimeoutSecs: 600 // Extended for discovery process
 };
@@ -938,7 +937,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                 ad.advertiserName || '',
                 ad.adText || '',
                 // English translation formula - translates from column G (Ad Text)
-                ad.adText ? `=GOOGLETRANSLATE(G${rowNumber}, "auto", "en")` : '',
+                ad.adText ? `=GOOGLETRANSLATE(G${rowNumber}; "ID"; "en")` : '',
                 adLibraryUrl || '',
                 ad.activeDays || 0,
                 ad.visualSummary?.totalImages || 0,
