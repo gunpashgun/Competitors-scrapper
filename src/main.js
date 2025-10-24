@@ -1,27 +1,41 @@
 import { Actor } from 'apify';
 import { PuppeteerCrawler } from 'crawlee';
+import { google } from 'googleapis';
 
 await Actor.init();
 
 const input = await Actor.getInput();
 const { 
     searchTerms: searchTermsInput = 'kursus coding anak\nbelajar programming anak\ncoding untuk anak\nmath for kids indonesia\ndesign course kids\nscratch programming\nvisual programming anak\ndigital literacy anak\nrobotika anak\nSTEM education Indonesia',
+    competitorUrls = [],
     country = 'ID',
     maxPages = 10,
     minActiveDays = 7,
     useProxy = false,
     saveMediaAssets = true,
-    highResolutionOnly = true
+    highResolutionOnly = true,
+    enableGoogleSheets = false,
+    googleSheetsSpreadsheetId = '',
+    googleSheetsName = 'Competitor Ads',
+    googleServiceAccountKey = ''
 } = input ?? {};
 
-// Parse search terms
+// Parse search terms (fallback if no competitorUrls provided)
 const searchTerms = searchTermsInput
     .split('\n')
     .map(term => term.trim())
     .filter(term => term.length > 0);
 
+// Use competitorUrls if provided, otherwise fall back to search terms
+const useDirectUrls = competitorUrls && competitorUrls.length > 0;
+
 console.log('🚀 Algonova Kids EdTech Competitor Discovery (Ages 5-17)');
-console.log(`📊 Search terms: ${searchTerms.join(', ')}`);
+if (useDirectUrls) {
+    console.log(`📊 Mode: Direct competitor URLs (${competitorUrls.length} competitors)`);
+    console.log(`📋 Competitors: ${competitorUrls.map(c => c.name).join(', ')}`);
+} else {
+    console.log(`📊 Search terms: ${searchTerms.join(', ')}`);
+}
 console.log(`🎯 Goal: Discover ALL advertisers running successful kids EdTech ads`);
 console.log(`⏱️ Minimum active days: ${minActiveDays}`);
 
@@ -76,8 +90,9 @@ const crawlerOptions = {
     },
     
     async requestHandler({ page, request }) {
-        const { searchTerm } = request.userData;
-        console.log(`🔍 Discovering advertisers for: "${searchTerm}"`);
+        const { searchTerm, competitorName, directUrl } = request.userData;
+        const displayName = competitorName || searchTerm;
+        console.log(`🔍 Discovering advertisers for: "${displayName}"`);
         
         try {
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
@@ -88,7 +103,8 @@ const crawlerOptions = {
                 });
             });
             
-            const searchUrl = `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=${country}&q=${encodeURIComponent(searchTerm)}&media_type=all`;
+            // Use direct URL if provided, otherwise generate search URL
+            const searchUrl = directUrl || `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=${country}&q=${encodeURIComponent(searchTerm)}&media_type=all`;
             console.log(`🌐 Loading: ${searchUrl}`);
             
             await page.goto(searchUrl, { 
@@ -243,7 +259,8 @@ const crawlerOptions = {
                                 
                                 // Discovery metadata
                                 searchTerm: searchTermParam,
-                                discoveryMethod: 'dynamic_competitor_discovery',
+                                competitorName: competitorName || searchTermParam,
+                                discoveryMethod: directUrl ? 'direct_url_discovery' : 'dynamic_competitor_discovery',
                                 isNewDiscoveredCompetitor: true,
                                 scrapedAt: new Date().toISOString(),
                                 
@@ -575,12 +592,12 @@ const crawlerOptions = {
                 
             }, searchTerm, KIDS_EDTECH_INDICATORS, EXCLUDE_INDICATORS, minActiveDays);
             
-            console.log(`🎯 Discovered ${discoveredAds.length} successful kids EdTech advertisers`);
+            console.log(`🎯 Discovered ${discoveredAds.length} ads from "${displayName}"`);
             
             if (discoveredAds.length > 0) {
                 // Log discovered competitors
                 const advertisers = [...new Set(discoveredAds.map(ad => ad.advertiserName))];
-                console.log(`📋 Discovered advertisers: ${advertisers.join(', ')}`);
+                console.log(`📋 Advertisers found: ${advertisers.join(', ')}`);
                 
                 // Add final enrichment
                 const enrichedAds = discoveredAds.map(ad => ({
@@ -607,11 +624,12 @@ const crawlerOptions = {
             }
             
         } catch (error) {
-            console.error(`❌ Error processing "${searchTerm}":`, error.message);
+            console.error(`❌ Error processing "${displayName}":`, error.message);
             
             await Actor.pushData([{
                 error: true,
-                searchTerm,
+                searchTerm: searchTerm || competitorName,
+                competitorName: competitorName,
                 errorMessage: error.message,
                 errorType: 'discovery_error',
                 scrapedAt: new Date().toISOString()
@@ -619,7 +637,7 @@ const crawlerOptions = {
         }
     },
     
-    maxRequestsPerCrawl: Math.min(searchTerms.length, 4),
+    maxRequestsPerCrawl: useDirectUrls ? competitorUrls.length : searchTerms.length, // Process all competitors
     maxConcurrency: 1,
     requestHandlerTimeoutSecs: 600 // Extended for discovery process
 };
@@ -700,16 +718,250 @@ async function autoScroll(page, maxScrolls = 15) {
     }
 }
 
-// Add requests for search terms
-for (const searchTerm of searchTerms.slice(0, 4)) {
-    await crawler.addRequests([{
-        url: `https://www.facebook.com/ads/library/`,
-        userData: { searchTerm }
-    }]);
+// Google Sheets Integration
+async function exportToGoogleSheets(data, spreadsheetId, sheetName, serviceAccountKey) {
+    try {
+        console.log('📊 Starting export to Google Sheets...');
+        
+        if (!serviceAccountKey || !spreadsheetId) {
+            console.log('⚠️ Google Sheets credentials not provided. Skipping export.');
+            return false;
+        }
+
+        // Parse service account key
+        let credentials;
+        try {
+            credentials = typeof serviceAccountKey === 'string' 
+                ? JSON.parse(serviceAccountKey) 
+                : serviceAccountKey;
+        } catch (e) {
+            console.error('❌ Invalid Service Account JSON:', e.message);
+            return false;
+        }
+
+        // Initialize Google Sheets API
+        const auth = new google.auth.GoogleAuth({
+            credentials,
+            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
+
+        const sheets = google.sheets({ version: 'v4', auth });
+
+        // Prepare data for sheets
+        const headers = [
+            'Ad ID',
+            'Advertiser Name',
+            'Ad Text',
+            'Active Days',
+            'Total Images',
+            'Total Videos',
+            'Has Carousel',
+            'Has Video',
+            'Media Type',
+            'Age Targeting',
+            'Course Subjects',
+            'Offers',
+            'Pricing Info',
+            'Quality Score',
+            'Content Relevance',
+            'Media Quality',
+            'Effectiveness Score',
+            'Content Type',
+            'Age Focus',
+            'Competitive Strength',
+            'Search Term',
+            'Scraped At',
+            'Image URLs',
+            'Video URLs'
+        ];
+
+        const rows = data.map(ad => [
+            ad.adId || '',
+            ad.advertiserName || '',
+            ad.adText || '',
+            ad.activeDays || 0,
+            ad.visualSummary?.totalImages || 0,
+            ad.visualSummary?.totalVideos || 0,
+            ad.visualSummary?.hasCarousel ? 'Yes' : 'No',
+            ad.visualSummary?.hasVideo ? 'Yes' : 'No',
+            ad.visualSummary?.dominantMediaType || '',
+            Array.isArray(ad.ageTargeting) ? ad.ageTargeting.join(', ') : '',
+            Array.isArray(ad.courseSubjects) ? ad.courseSubjects.join(', ') : '',
+            Array.isArray(ad.offers) ? ad.offers.join(', ') : '',
+            Array.isArray(ad.pricingInfo) ? ad.pricingInfo.join(', ') : '',
+            ad.adQualityScore || 0,
+            ad.contentRelevanceScore || 0,
+            ad.mediaQualityScore || 0,
+            ad.effectiveness_score || 0,
+            ad.content_type || '',
+            ad.age_focus || '',
+            ad.competitive_strength || '',
+            ad.searchTerm || '',
+            ad.scrapedAt || '',
+            Array.isArray(ad.allImageUrls) ? ad.allImageUrls.join('\n') : '',
+            Array.isArray(ad.allVideoUrls) ? ad.allVideoUrls.join('\n') : ''
+        ]);
+
+        // Check if sheet exists, create if not
+        try {
+            const spreadsheet = await sheets.spreadsheets.get({
+                spreadsheetId,
+            });
+
+            const sheetExists = spreadsheet.data.sheets.some(
+                sheet => sheet.properties.title === sheetName
+            );
+
+            if (!sheetExists) {
+                console.log(`📝 Creating new sheet: "${sheetName}"`);
+                await sheets.spreadsheets.batchUpdate({
+                    spreadsheetId,
+                    requestBody: {
+                        requests: [{
+                            addSheet: {
+                                properties: { title: sheetName }
+                            }
+                        }]
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error checking/creating sheet:', error.message);
+        }
+
+        // Clear existing data and write new data
+        const range = `${sheetName}!A1`;
+        
+        // Clear sheet
+        await sheets.spreadsheets.values.clear({
+            spreadsheetId,
+            range: `${sheetName}!A:Z`,
+        });
+
+        // Write headers and data
+        await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range,
+            valueInputOption: 'RAW',
+            requestBody: {
+                values: [headers, ...rows]
+            }
+        });
+
+        // Format headers (bold, freeze row)
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+                requests: [
+                    {
+                        repeatCell: {
+                            range: {
+                                sheetId: 0,
+                                startRowIndex: 0,
+                                endRowIndex: 1
+                            },
+                            cell: {
+                                userEnteredFormat: {
+                                    backgroundColor: { red: 0.2, green: 0.2, blue: 0.2 },
+                                    textFormat: {
+                                        foregroundColor: { red: 1, green: 1, blue: 1 },
+                                        bold: true
+                                    }
+                                }
+                            },
+                            fields: 'userEnteredFormat(backgroundColor,textFormat)'
+                        }
+                    },
+                    {
+                        updateSheetProperties: {
+                            properties: {
+                                sheetId: 0,
+                                gridProperties: { frozenRowCount: 1 }
+                            },
+                            fields: 'gridProperties.frozenRowCount'
+                        }
+                    }
+                ]
+            }
+        });
+
+        console.log(`✅ Successfully exported ${rows.length} ads to Google Sheets`);
+        console.log(`🔗 View your data: https://docs.google.com/spreadsheets/d/${spreadsheetId}`);
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Google Sheets export failed:', error.message);
+        if (error.response) {
+            console.error('API Response:', error.response.data);
+        }
+        return false;
+    }
+}
+
+// Add requests - use direct URLs if provided, otherwise search terms
+if (useDirectUrls) {
+    console.log(`🔗 Using ${competitorUrls.length} direct competitor URLs`);
+    for (const competitor of competitorUrls) {
+        await crawler.addRequests([{
+            url: competitor.url,
+            userData: { 
+                competitorName: competitor.name,
+                directUrl: competitor.url,
+                searchTerm: competitor.name
+            }
+        }]);
+    }
+} else {
+    console.log(`🔍 Using ${searchTerms.length} search terms`);
+    for (const searchTerm of searchTerms) {
+        await crawler.addRequests([{
+            url: `https://www.facebook.com/ads/library/`,
+            userData: { searchTerm }
+        }]);
+    }
 }
 
 await crawler.run();
 
 console.log('🎉 Dynamic competitor discovery completed!');
 console.log('📊 Discovered all advertisers running successful kids EdTech ads');
+
+// Export to Google Sheets if enabled
+if (enableGoogleSheets) {
+    console.log('📤 Preparing to export data to Google Sheets...');
+    
+    try {
+        // Get all data from the dataset
+        const dataset = await Actor.openDataset();
+        const { items } = await dataset.getData();
+        
+        // Filter out error entries for clean export
+        const validAds = items.filter(item => !item.error && item.advertiserName);
+        
+        if (validAds.length > 0) {
+            console.log(`📋 Found ${validAds.length} ads to export`);
+            
+            const exportSuccess = await exportToGoogleSheets(
+                validAds,
+                googleSheetsSpreadsheetId,
+                googleSheetsName,
+                googleServiceAccountKey
+            );
+            
+            if (exportSuccess) {
+                console.log('✅ Data successfully exported to Google Sheets!');
+            } else {
+                console.log('⚠️ Export to Google Sheets failed. Data is still saved in Apify Dataset.');
+            }
+        } else {
+            console.log('⚠️ No valid ads found to export to Google Sheets');
+        }
+    } catch (error) {
+        console.error('❌ Error during Google Sheets export:', error.message);
+        console.log('💾 Data is still available in Apify Dataset');
+    }
+} else {
+    console.log('ℹ️ Google Sheets export is disabled. Enable it in input settings to export data.');
+}
+
 await Actor.exit();

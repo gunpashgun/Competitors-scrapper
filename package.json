@@ -10,7 +10,8 @@
     "dependencies": {
         "apify": "^3.4.2",
         "crawlee": "^3.5.0",
-        "puppeteer": "24.12.1"
+        "puppeteer": "24.12.1",
+        "googleapis": "^128.0.0"
     },
     "scripts": { 
         "start": "node ./src/main.js" 

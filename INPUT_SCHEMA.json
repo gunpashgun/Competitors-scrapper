@@ -4,8 +4,15 @@
     "type": "object",
     "schemaVersion": 1,
     "properties": {
+        "competitorUrls": {
+            "title": "Competitor URLs (Direct Ad Library links)",
+            "type": "array",
+            "description": "Array of competitor objects with name and Ad Library URL. If provided, this takes priority over searchTerms.",
+            "editor": "json",
+            "prefill": []
+        },
         "searchTerms": {
-            "title": "Search Terms (one per line)",
+            "title": "Search Terms (one per line) - Fallback if no URLs",
             "type": "string",
             "editor": "textarea",
             "default": "online course\nbelajar online\nkursus programming\ncoding bootcamp"
@@ -36,6 +43,31 @@
             "type": "boolean",
             "description": "Enable residential proxy for better success rate ($10-20/month)",
             "default": false
+        },
+        "enableGoogleSheets": {
+            "title": "Export to Google Sheets",
+            "type": "boolean",
+            "description": "Enable automatic export to Google Sheets",
+            "default": false
+        },
+        "googleSheetsSpreadsheetId": {
+            "title": "Google Sheets Spreadsheet ID",
+            "type": "string",
+            "description": "The ID from your Google Sheets URL (e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms)",
+            "editor": "textfield"
+        },
+        "googleSheetsName": {
+            "title": "Sheet Name",
+            "type": "string",
+            "description": "Name of the sheet tab (will be created if doesn't exist)",
+            "default": "Competitor Ads"
+        },
+        "googleServiceAccountKey": {
+            "title": "Google Service Account Key (JSON)",
+            "type": "string",
+            "description": "Paste your Service Account JSON credentials here",
+            "editor": "textarea",
+            "isSecret": true
         }
     },
     "required": ["searchTerms", "country"]

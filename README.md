@@ -1,6 +1,70 @@
-# JavaScript PuppeteerCrawler Actor template
+# 🎯 Facebook Ads Competitor Scraper with Google Sheets Export
 
-This template is a production ready boilerplate for developing with `PuppeteerCrawler`. The `PuppeteerCrawler` provides a simple framework for parallel crawling of web pages using headless Chrome with Puppeteer. Since `PuppeteerCrawler` uses headless Chrome to download web pages and extract data, it is useful for crawling of websites that require to execute JavaScript.
+Мощный Apify Actor для сбора данных по рекламным креативам конкурентов из Facebook Ads Library с автоматическим экспортом в Google Sheets.
+
+## ✨ Возможности
+
+- 🔍 **Автоматический сбор данных** из Facebook Ads Library
+- 📊 **Экспорт в Google Sheets** - автоматическая отправка данных в таблицу
+- 🎯 **Умная фильтрация** - находит только релевантные объявления
+- 📸 **Сбор медиа** - изображения, видео, карусели
+- 📈 **Аналитика** - оценка качества, эффективности и конкурентной силы
+- 🔄 **Обход блокировок** - поддержка прокси
+- ⚡ **Готов к production** - надежный и масштабируемый
+
+## 🚀 Быстрый старт
+
+### 1. Настройка Google Sheets (опционально)
+
+Для автоматического экспорта данных в Google Sheets следуйте инструкции:
+
+📖 **[Полное руководство по настройке Google Sheets](GOOGLE_SHEETS_SETUP.md)**
+
+### 2. Запуск Actor
+
+1. Настройте параметры в `INPUT_SCHEMA.json`
+2. Запустите Actor через Apify Console или локально
+3. Данные автоматически сохранятся в Dataset и (если настроено) в Google Sheets
+
+## 📋 Параметры запуска
+
+### Основные параметры
+
+- **Search Terms** - поисковые запросы (один на строку)
+- **Target Country** - страна для поиска (ID, SG, MY, US)
+- **Maximum Pages** - максимальное количество страниц для скрейпинга
+- **Minimum Active Days** - минимальное количество дней активности объявления
+- **Use Residential Proxies** - использовать прокси для обхода блокировок
+
+### Google Sheets параметры
+
+- **Export to Google Sheets** - включить экспорт в Google Sheets
+- **Google Sheets Spreadsheet ID** - ID таблицы Google Sheets
+- **Sheet Name** - название листа (по умолчанию: "Competitor Ads")
+- **Google Service Account Key (JSON)** - JSON ключ Service Account
+
+## 📊 Структура данных
+
+Для каждого объявления собирается:
+
+- Базовая информация (ID, название рекламодателя, текст)
+- Метрики активности (дни активности, дата сбора)
+- Медиа материалы (изображения, видео, thumbnails)
+- Аналитика качества (Quality Score, Content Relevance, Media Quality)
+- Образовательные данные (возрастной таргетинг, предметы курсов)
+- Маркетинговые данные (предложения, цены)
+
+## 🎨 Экспорт в Google Sheets
+
+При включенной опции данные автоматически экспортируются в Google Sheets со следующими возможностями:
+
+- ✅ Автоматическое форматирование заголовков
+- ✅ Закрепление первой строки
+- ✅ Очистка предыдущих данных при новом запуске
+- ✅ Создание листа, если он не существует
+- ✅ 24 колонки с детальной информацией
+
+## 🛠️ Локальная разработка
 
 If you're looking for examples or want to learn more visit:
 
