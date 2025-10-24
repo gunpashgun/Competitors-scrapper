@@ -223,6 +223,7 @@ const crawlerOptions = {
                 
                 // Track why ads are rejected
                 const rejectionReasons = [];
+                const debugSamples = []; // Store first 3 for debugging
                 
                 potentialAdContainers.forEach((container, index) => {
                     try {
@@ -232,13 +233,17 @@ const crawlerOptions = {
                         const mediaAssets = extractMediaAssets(container);
                         const activeDays = extractActiveDays(container);
                         
-                        // Debug first 3 containers
+                        // Debug first 3 containers - store for return
                         if (index < 3) {
-                            console.log(`\nContainer ${index}:`);
-                            console.log(`  Advertiser: "${advertiserInfo.name}"`);
-                            console.log(`  Ad text length: ${adContent.text ? adContent.text.length : 0}`);
-                            console.log(`  Active days: ${activeDays}`);
-                            console.log(`  Images: ${mediaAssets.images.length}, Videos: ${mediaAssets.videos.length}`);
+                            debugSamples.push({
+                                index: index,
+                                advertiser: advertiserInfo.name || 'null',
+                                textLength: adContent.text ? adContent.text.length : 0,
+                                textPreview: adContent.text ? adContent.text.substring(0, 100) : '',
+                                activeDays: activeDays,
+                                images: mediaAssets.images.length,
+                                videos: mediaAssets.videos.length
+                            });
                         }
                         
                         // Simple filters: just check if we have basic data and meets min days
@@ -640,6 +645,7 @@ const crawlerOptions = {
                         totalContainers: allContainers.length,
                         potentialAdContainers: potentialAdContainers.length,
                         rejectionReasons: reasonCounts,
+                        debugSamples: debugSamples,
                         pageUrl: window.location.href,
                         pageTitle: document.title
                     }
@@ -654,10 +660,31 @@ const crawlerOptions = {
             console.log(`   Selector counts:`, JSON.stringify(discoveredAdsResult.debug.selectorCounts));
             console.log(`   Total containers checked: ${discoveredAdsResult.debug.totalContainers}`);
             console.log(`   Potential ad containers: ${discoveredAdsResult.debug.potentialAdContainers}`);
-            console.log(`   Rejection reasons:`, JSON.stringify(discoveredAdsResult.debug.rejectionReasons));
+            
+            // Log first 3 sample extractions
+            console.log('\n🔬 Sample Extractions (first 3 containers):');
+            if (discoveredAdsResult.debug.debugSamples && discoveredAdsResult.debug.debugSamples.length > 0) {
+                discoveredAdsResult.debug.debugSamples.forEach(sample => {
+                    console.log(`\n  Container ${sample.index}:`);
+                    console.log(`    Advertiser: "${sample.advertiser}"`);
+                    console.log(`    Text length: ${sample.textLength}`);
+                    console.log(`    Text preview: "${sample.textPreview}"`);
+                    console.log(`    Active days: ${sample.activeDays}`);
+                    console.log(`    Media: ${sample.images} images, ${sample.videos} videos`);
+                });
+            } else {
+                console.log('  No samples available');
+            }
+            
+            console.log('\n📊 Rejection Summary:');
+            if (discoveredAdsResult.debug.rejectionReasons) {
+                Object.entries(discoveredAdsResult.debug.rejectionReasons).forEach(([reason, count]) => {
+                    console.log(`  ${reason}: ${count}`);
+                });
+            }
             
             const discoveredAds = discoveredAdsResult.ads;
-            console.log(`🎯 Discovered ${discoveredAds.length} ads from "${displayName}"`);
+            console.log(`\n🎯 Discovered ${discoveredAds.length} ads from "${displayName}"`);
             
             if (discoveredAds.length > 0) {
                 // Log discovered competitors
