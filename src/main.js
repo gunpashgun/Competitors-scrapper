@@ -167,7 +167,7 @@ const crawlerOptions = {
             console.log('🔍 Checking page content...');
             
             // Collect ALL ads from the page (no filtering by quality)
-            const discoveredAds = await page.evaluate((searchTermParam, minDays, competitorName, directUrl) => {
+            const discoveredAdsResult = await page.evaluate((searchTermParam, minDays, competitorName, directUrl) => {
                 const ads = [];
                 
                 console.log('🔍 Starting ad discovery in browser context...');
@@ -598,10 +598,29 @@ const crawlerOptions = {
                     return highestResVideos.filter(Boolean);
                 }
                 
-                return ads.slice(0, 15); // Limit to 15 ads per competitor to save memory
+                // Return both ads and debug info
+                return {
+                    ads: ads.slice(0, 15), // Limit to 15 ads per competitor to save memory
+                    debug: {
+                        selectorCounts: testSelectors,
+                        totalContainers: allContainers.length,
+                        potentialAdContainers: potentialAdContainers.length,
+                        pageUrl: window.location.href,
+                        pageTitle: document.title
+                    }
+                };
                 
             }, searchTerm, minActiveDays, competitorName, directUrl);
             
+            // Log debug info from browser
+            console.log('📊 Debug Info from Browser:');
+            console.log(`   URL: ${discoveredAdsResult.debug.pageUrl}`);
+            console.log(`   Title: ${discoveredAdsResult.debug.pageTitle}`);
+            console.log(`   Selector counts:`, JSON.stringify(discoveredAdsResult.debug.selectorCounts));
+            console.log(`   Total containers checked: ${discoveredAdsResult.debug.totalContainers}`);
+            console.log(`   Potential ad containers: ${discoveredAdsResult.debug.potentialAdContainers}`);
+            
+            const discoveredAds = discoveredAdsResult.ads;
             console.log(`🎯 Discovered ${discoveredAds.length} ads from "${displayName}"`);
             
             if (discoveredAds.length > 0) {
