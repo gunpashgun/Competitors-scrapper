@@ -30,7 +30,7 @@ const searchTerms = searchTermsInput
 const useDirectUrls = competitorUrls && competitorUrls.length > 0;
 
 console.log('🚀 Competitor Ads Scraper');
-console.log('🔖 VERSION: 2025-10-24-v1.3 (Fixed image extraction - exclude small icons)');
+console.log('🔖 VERSION: 2025-10-24-v1.4 (Sorting + Translation + Text Wrap)');
 console.log('✅ Code successfully loaded from GitHub');
 console.log('─────────────────────────────────────────────────────');
 if (useDirectUrls) {
@@ -894,6 +894,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             'Ad ID',
             'Advertiser Name',
             'Ad Text',
+            'Ad Text Eng',
             'View Ad',
             'Active Days',
             'Total Images',
@@ -904,9 +905,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             'Age Targeting',
             'Course Subjects',
             'Offers',
-            'Pricing Info',
-            'Search Term',
-            'Scraped At'
+            'Search Term'
         ];
 
         const rows = data.map((ad, index) => {
@@ -938,6 +937,8 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                 ad.adId || '',
                 ad.advertiserName || '',
                 ad.adText || '',
+                // English translation formula - translates from column G (Ad Text)
+                ad.adText ? `=GOOGLETRANSLATE(G${rowNumber}, "auto", "en")` : '',
                 adLibraryUrl || '',
                 ad.activeDays || 0,
                 ad.visualSummary?.totalImages || 0,
@@ -948,10 +949,15 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                 Array.isArray(ad.ageTargeting) ? ad.ageTargeting.join(', ') : '',
                 Array.isArray(ad.courseSubjects) ? ad.courseSubjects.join(', ') : '',
                 Array.isArray(ad.offers) ? ad.offers.join(', ') : '',
-                Array.isArray(ad.pricingInfo) ? ad.pricingInfo.join(', ') : '',
-                ad.searchTerm || ad.competitorName || '',
-                ad.scrapedAt || ''
+                ad.searchTerm || ad.competitorName || ''
             ];
+        });
+        
+        // Sort by Active Days (ascending - newest ads first)
+        const sortedRows = rows.sort((a, b) => {
+            const aDays = a[9] || 0; // Column J (index 9) = Active Days
+            const bDays = b[9] || 0;
+            return aDays - bDays; // Ascending: 1 day < 2 days < 3 days
         });
 
         // Check if sheet exists, create if not
@@ -990,14 +996,14 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             range: `${sheetName}!A:Z`,
         });
 
-        // Write headers and data
-        // Use USER_ENTERED to interpret formulas (IMAGE function)
+        // Write headers and data (sorted by Active Days)
+        // Use USER_ENTERED to interpret formulas (IMAGE, GOOGLETRANSLATE)
         await sheets.spreadsheets.values.update({
             spreadsheetId,
             range,
             valueInputOption: 'USER_ENTERED',
             requestBody: {
-                values: [headers, ...rows]
+                values: [headers, ...sortedRows]
             }
         });
 
@@ -1100,19 +1106,37 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                         sheetId: sheetId,
                         dimension: 'ROWS',
                         startIndex: 1,
-                        endIndex: rows.length + 1
+                        endIndex: sortedRows.length + 1
                     },
                     properties: {
                         pixelSize: 150
                     },
                     fields: 'pixelSize'
                 }
+            },
+            // Enable text wrapping for all cells (so Ad Text fits in cells)
+            {
+                repeatCell: {
+                    range: {
+                        sheetId: sheetId,
+                        startRowIndex: 0,
+                        endRowIndex: sortedRows.length + 1,
+                        startColumnIndex: 0,
+                        endColumnIndex: headers.length
+                    },
+                    cell: {
+                        userEnteredFormat: {
+                            wrapStrategy: 'WRAP'
+                        }
+                    },
+                    fields: 'userEnteredFormat.wrapStrategy'
+                }
             }
         ];
 
         // Note: Conditional formatting for fresh ads (1-2 days) can be added manually in Google Sheets
-        // Format > Conditional formatting > Custom formula: =$H2<=2 (Column H = Active Days)
-        // (Google Sheets API has limitations with complex formulas)
+        // Format > Conditional formatting > Custom formula: =$J2<=2 (Column J = Active Days)
+        // Data is auto-sorted by Active Days (newest first)
 
         await sheets.spreadsheets.batchUpdate({
             spreadsheetId,
@@ -1121,7 +1145,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             }
         });
 
-        console.log(`✅ Exported ${rows.length} ads to sheet "${sheetName}"`);
+        console.log(`✅ Exported ${sortedRows.length} ads to sheet "${sheetName}" (sorted by date, newest first)`);
 }
 
 // Add requests - use direct URLs if provided, otherwise search terms
