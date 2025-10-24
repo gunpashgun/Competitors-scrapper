@@ -30,7 +30,7 @@ const searchTerms = searchTermsInput
 const useDirectUrls = competitorUrls && competitorUrls.length > 0;
 
 console.log('🚀 Competitor Ads Scraper');
-console.log('🔖 VERSION: 2025-10-24-v1.0 (Working! Data extraction + Google Sheets)');
+console.log('🔖 VERSION: 2025-10-24-v1.1 (Fixed IMAGE formula - URL in separate column)');
 console.log('✅ Code successfully loaded from GitHub');
 console.log('─────────────────────────────────────────────────────');
 if (useDirectUrls) {
@@ -881,7 +881,9 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
         // Prepare data for sheets
         const headers = [
             'Image Preview',
-            'Video Thumbnail',
+            'Image URL',
+            'Video Preview', 
+            'Video URL',
             'Ad ID',
             'Advertiser Name',
             'Ad Text',
@@ -897,8 +899,8 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             'Pricing Info',
             'Search Term',
             'Scraped At',
-            'Image URLs',
-            'Video URLs'
+            'All Image URLs',
+            'All Video URLs'
         ];
 
         const rows = data.map((ad, index) => {
@@ -911,11 +913,17 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             const videoThumbnail = ad.mediaAssets?.thumbnails?.[0]?.url || 
                                    ad.mediaAssets?.videos?.[0]?.thumbnailUrl || '';
             
+            const rowNumber = index + 2; // +2 because row 1 is header, data starts at row 2
+            
             return [
-                // Image Preview - Google Sheets formula
-                firstImageUrl ? `=IMAGE("${firstImageUrl}", 1)` : '',
-                // Video Thumbnail Preview
-                videoThumbnail ? `=IMAGE("${videoThumbnail}", 1)` : '',
+                // Image Preview - formula references Image URL column (B)
+                firstImageUrl ? `=IMAGE(B${rowNumber})` : '',
+                // Image URL
+                firstImageUrl || '',
+                // Video Preview - formula references Video URL column (D)
+                videoThumbnail ? `=IMAGE(D${rowNumber})` : '',
+                // Video Thumbnail URL
+                videoThumbnail || '',
                 ad.adId || '',
                 ad.advertiserName || '',
                 ad.adText || '',
@@ -1025,12 +1033,12 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                         endIndex: 1
                     },
                     properties: {
-                        pixelSize: 200
+                        pixelSize: 150
                     },
                     fields: 'pixelSize'
                 }
             },
-            // Set width for Video Thumbnail column (B)
+            // Set width for Image URL column (B) - narrower
             {
                 updateDimensionProperties: {
                     range: {
@@ -1040,7 +1048,37 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                         endIndex: 2
                     },
                     properties: {
-                        pixelSize: 200
+                        pixelSize: 80
+                    },
+                    fields: 'pixelSize'
+                }
+            },
+            // Set width for Video Preview column (C)
+            {
+                updateDimensionProperties: {
+                    range: {
+                        sheetId: sheetId,
+                        dimension: 'COLUMNS',
+                        startIndex: 2,
+                        endIndex: 3
+                    },
+                    properties: {
+                        pixelSize: 150
+                    },
+                    fields: 'pixelSize'
+                }
+            },
+            // Set width for Video URL column (D) - narrower
+            {
+                updateDimensionProperties: {
+                    range: {
+                        sheetId: sheetId,
+                        dimension: 'COLUMNS',
+                        startIndex: 3,
+                        endIndex: 4
+                    },
+                    properties: {
+                        pixelSize: 80
                     },
                     fields: 'pixelSize'
                 }
@@ -1063,7 +1101,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
         ];
 
         // Note: Conditional formatting for fresh ads (1-2 days) can be added manually in Google Sheets
-        // Format > Conditional formatting > Custom formula: =$F2<=2
+        // Format > Conditional formatting > Custom formula: =$H2<=2 (Column H = Active Days)
         // (Google Sheets API has limitations with complex formulas)
 
         await sheets.spreadsheets.batchUpdate({
