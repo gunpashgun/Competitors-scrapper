@@ -1,0 +1,87 @@
+[
+  {
+    "page_name": "Koding Next",
+    "ad_id": "987654321",
+    "ad_delivery_start_time": "2025-10-15",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/v/t45/image1.jpg",
+      "video_url": null,
+      "body": "Belajar coding seru! Kursus programming untuk anak usia 7-17 tahun. Daftar sekarang!",
+      "call_to_action_type": "LEARN_MORE"
+    },
+    "platforms": ["facebook", "instagram"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=987654321"
+  },
+  {
+    "page_name": "Koding Next",
+    "ad_id": "987654322",
+    "ad_delivery_start_time": "2025-10-15",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/v/t45/image1.jpg",
+      "video_url": null,
+      "body": "Yuk belajar coding! Program menarik untuk anak-anak. Daftar gratis trial!",
+      "call_to_action_type": "SIGN_UP"
+    },
+    "platforms": ["facebook", "instagram"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=987654322"
+  },
+  {
+    "page_name": "Bright Champs",
+    "ad_id": "123456789",
+    "ad_delivery_start_time": "2025-09-20",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/v/t45/image2.jpg",
+      "video_url": "https://video.xx.fbcdn.net/v/t42/video1.mp4",
+      "body": "Kursus coding online terbaik untuk anak! Instruktur berpengalaman, kurikulum internasional.",
+      "call_to_action_type": "LEARN_MORE"
+    },
+    "platforms": ["facebook", "instagram", "messenger"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=123456789"
+  },
+  {
+    "page_name": "Bright Champs",
+    "ad_id": "123456790",
+    "ad_delivery_start_time": "2025-10-01",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/v/t45/image3.jpg",
+      "video_url": null,
+      "body": "Kursus coding online terbaik untuk anak! Instruktur berpengalaman, kurikulum internasional.",
+      "call_to_action_type": "LEARN_MORE"
+    },
+    "platforms": ["facebook"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=123456790"
+  },
+  {
+    "page_name": "Timedoor Academy",
+    "ad_id": "555666777",
+    "ad_delivery_start_time": "2025-10-20",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/v/t45/image4.jpg",
+      "video_url": null,
+      "body": "Bootcamp coding untuk pemula. Dari zero to hero dalam 3 bulan!",
+      "call_to_action_type": "APPLY_NOW"
+    },
+    "platforms": ["facebook", "instagram"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=555666777"
+  },
+  {
+    "page_name": "Coding Bee Academy",
+    "ad_id": "888999000",
+    "ad_delivery_start_time": "2025-08-15",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/v/t45/image5.jpg",
+      "video_url": "https://video.xx.fbcdn.net/v/t42/video2.mp4",
+      "body": "Scratch, Python, JavaScript - pilih bahasa favoritmu! Free trial class tersedia.",
+      "call_to_action_type": "SIGN_UP"
+    },
+    "platforms": ["facebook", "instagram"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=888999000"
+  }
+]
+

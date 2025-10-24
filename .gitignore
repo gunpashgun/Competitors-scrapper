@@ -26,3 +26,7 @@ READY_TO_USE_INPUT.json
 COMPETITOR_URLS_INPUT.json
 *_credentials.json
 *.private.json
+
+# Scoring script output
+scored_ads.csv
+ads_data.json
