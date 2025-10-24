@@ -1,0 +1,23 @@
+# This file tells Git which files shouldn't be added to source control
+
+.DS_Store
+.idea
+.vscode
+.zed
+dist
+node_modules
+apify_storage
+storagenode_modules/
+storage/
+apify_storage/
+datasets/
+key_value_stores/
+logs/
+.DS_Store
+node_modules/
+storage/
+apify_storage/
+datasets/
+key_value_stores/
+logs/
+.DS_Store

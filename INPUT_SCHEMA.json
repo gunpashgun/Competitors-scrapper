@@ -1,0 +1,42 @@
+{
+    "title": "Facebook Ads Scraper - Login Bypass + Proxy",
+    "description": "Advanced Facebook Ads Library scraper with login bypass and proxy support",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "searchTerms": {
+            "title": "Search Terms (one per line)",
+            "type": "string",
+            "editor": "textarea",
+            "default": "online course\nbelajar online\nkursus programming\ncoding bootcamp"
+        },
+        "country": {
+            "title": "Target Country",
+            "type": "string",
+            "default": "ID",
+            "enum": ["ID", "SG", "MY", "US"],
+            "enumTitles": ["Indonesia", "Singapore", "Malaysia", "United States"]
+        },
+        "maxPages": {
+            "title": "Maximum Pages",
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 50
+        },
+        "minActiveDays": {
+            "title": "Minimum Active Days",
+            "type": "integer",
+            "default": 7,
+            "minimum": 1,
+            "maximum": 365
+        },
+        "useProxy": {
+            "title": "Use Residential Proxies",
+            "type": "boolean",
+            "description": "Enable residential proxy for better success rate ($10-20/month)",
+            "default": false
+        }
+    },
+    "required": ["searchTerms", "country"]
+}
