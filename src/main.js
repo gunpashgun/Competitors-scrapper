@@ -84,7 +84,27 @@ const crawlerOptions = {
                 '--window-size=1920,1080',
                 '--disable-web-security',
                 '--disable-features=VizDisplayCompositor',
-                '--disable-blink-features=AutomationControlled'
+                '--disable-blink-features=AutomationControlled',
+                // Memory optimization flags
+                '--disable-extensions',
+                '--disable-background-networking',
+                '--disable-default-apps',
+                '--disable-sync',
+                '--metrics-recording-only',
+                '--mute-audio',
+                '--no-first-run',
+                '--safebrowsing-disable-auto-update',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-breakpad',
+                '--disable-component-extensions-with-background-pages',
+                '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+                '--disable-ipc-flooding-protection',
+                '--disable-renderer-backgrounding',
+                '--enable-features=NetworkService,NetworkServiceInProcess',
+                '--force-color-profile=srgb',
+                '--hide-scrollbars',
+                '--js-flags=--max-old-space-size=512'  // Limit JS heap to 512MB
             ]
         }
     },
@@ -154,9 +174,9 @@ const crawlerOptions = {
             
             console.log('🕵️ Discovering all kids EdTech advertisers...');
             
-            // Enhanced scrolling to discover more advertisers
-            await autoScroll(page, 20);
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            // Reduced scrolling to save memory (was 20, now 10)
+            await autoScroll(page, 10);
+            await new Promise(resolve => setTimeout(resolve, 3000));
             
             // DYNAMIC COMPETITOR DISCOVERY: Find ALL advertisers running kids EdTech ads
             const discoveredAds = await page.evaluate((searchTermParam, indicators, excludeTerms, minDays) => {
@@ -646,7 +666,7 @@ const crawlerOptions = {
                     return highestResVideos.filter(Boolean);
                 }
                 
-                return ads.slice(0, 25); // Return top discovered advertisers
+                return ads.slice(0, 15); // Reduced from 25 to 15 to save memory
                 
             }, searchTerm, KIDS_EDTECH_INDICATORS, EXCLUDE_INDICATORS, minActiveDays);
             
@@ -692,6 +712,16 @@ const crawlerOptions = {
                 errorType: 'discovery_error',
                 scrapedAt: new Date().toISOString()
             }]);
+        } finally {
+            // Clear page memory after processing
+            try {
+                await page.evaluate(() => {
+                    // Clear large objects from memory
+                    if (window.gc) window.gc();
+                });
+            } catch (e) {
+                // Ignore cleanup errors
+            }
         }
     },
     
