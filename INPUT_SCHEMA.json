@@ -34,7 +34,7 @@
         "minActiveDays": {
             "title": "Minimum Active Days",
             "type": "integer",
-            "default": 7,
+            "default": 1,
             "minimum": 1,
             "maximum": 365
         },
