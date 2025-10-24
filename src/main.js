@@ -30,7 +30,7 @@ const searchTerms = searchTermsInput
 const useDirectUrls = competitorUrls && competitorUrls.length > 0;
 
 console.log('🚀 Competitor Ads Scraper');
-console.log('🔖 VERSION: 2025-10-24-DEBUG-v4 (Error tracking in extraction loop)');
+console.log('🔖 VERSION: 2025-10-24-DEBUG-v5 (Fixed indicators undefined error)');
 console.log('✅ Code successfully loaded from GitHub');
 console.log('─────────────────────────────────────────────────────');
 if (useDirectUrls) {
@@ -376,29 +376,16 @@ const crawlerOptions = {
                     let adText = '';
                     let libraryId = null;
                     
-                    // Try to find meaningful educational content
+                    // Find any substantial text content (no keyword filtering)
                     for (const selector of textSelectors) {
                         const elements = container.querySelectorAll(selector);
                         
                         for (const element of elements) {
                             const text = element.textContent.trim();
-                            if (text.length > 30) {
-                                // Prefer text that contains educational keywords
-                                const hasEducationalKeywords = indicators.education_terms.some(term => 
-                                    text.toLowerCase().includes(term)
-                                ) || indicators.subjects.some(term => 
-                                    text.toLowerCase().includes(term)
-                                );
-                                
-                                if (hasEducationalKeywords) {
-                                    adText = text;
-                                    break;
-                                }
-                                
-                                // Fallback to any substantial text
-                                if (!adText && text.length > 50) {
-                                    adText = text;
-                                }
+                            // Take any text with reasonable length
+                            if (text.length > 50) {
+                                adText = text;
+                                break;
                             }
                         }
                         
