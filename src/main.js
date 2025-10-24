@@ -667,10 +667,10 @@ async function autoScroll(page, maxScrolls = 15) {
     }
 }
 
-// Google Sheets Integration
-async function exportToGoogleSheets(data, spreadsheetId, sheetName, serviceAccountKey) {
+// Google Sheets Integration - Export each competitor to separate sheet
+async function exportToGoogleSheetsByCompetitor(adsByCompetitor, spreadsheetId, serviceAccountKey) {
     try {
-        console.log('📊 Starting export to Google Sheets...');
+        console.log('📊 Starting export to Google Sheets (separate sheets per competitor)...');
         
         if (!serviceAccountKey || !spreadsheetId) {
             console.log('⚠️ Google Sheets credentials not provided. Skipping export.');
@@ -696,6 +696,61 @@ async function exportToGoogleSheets(data, spreadsheetId, sheetName, serviceAccou
 
         const sheets = google.sheets({ version: 'v4', auth });
 
+        // Get existing sheets to find their IDs
+        const spreadsheet = await sheets.spreadsheets.get({
+            spreadsheetId,
+        });
+
+        const existingSheets = spreadsheet.data.sheets || [];
+        const sheetNameToId = {};
+        existingSheets.forEach(sheet => {
+            sheetNameToId[sheet.properties.title] = sheet.properties.sheetId;
+        });
+
+        // Process each competitor
+        let totalExported = 0;
+        for (const [competitorName, ads] of Object.entries(adsByCompetitor)) {
+            console.log(`📝 Exporting ${ads.length} ads for "${competitorName}"`);
+            
+            const sheetName = competitorName.substring(0, 100); // Limit sheet name length
+            
+            // Check if sheet exists, create if not
+            if (!sheetNameToId[sheetName]) {
+                console.log(`Creating new sheet: "${sheetName}"`);
+                const addSheetResponse = await sheets.spreadsheets.batchUpdate({
+                    spreadsheetId,
+                    requestBody: {
+                        requests: [{
+                            addSheet: {
+                                properties: { title: sheetName }
+                            }
+                        }]
+                    }
+                });
+                sheetNameToId[sheetName] = addSheetResponse.data.replies[0].addSheet.properties.sheetId;
+            }
+
+            const sheetId = sheetNameToId[sheetName];
+
+            // Prepare data for this competitor
+            await exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, ads);
+            totalExported += ads.length;
+        }
+
+        console.log(`✅ Successfully exported ${totalExported} ads across ${Object.keys(adsByCompetitor).length} sheets`);
+        console.log(`🔗 View your data: https://docs.google.com/spreadsheets/d/${spreadsheetId}`);
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Google Sheets export failed:', error.message);
+        if (error.response) {
+            console.error('API Response:', error.response.data);
+        }
+        return false;
+    }
+}
+
+async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, data) {
         // Prepare data for sheets
         const headers = [
             'Image Preview',
@@ -801,99 +856,122 @@ async function exportToGoogleSheets(data, spreadsheetId, sheetName, serviceAccou
             }
         });
 
-        // Format headers (bold, freeze row) and set column widths for previews
-        await sheets.spreadsheets.batchUpdate({
-            spreadsheetId,
-            requestBody: {
-                requests: [
-                    {
-                        repeatCell: {
-                            range: {
-                                sheetId: 0,
-                                startRowIndex: 0,
-                                endRowIndex: 1
-                            },
-                            cell: {
-                                userEnteredFormat: {
-                                    backgroundColor: { red: 0.2, green: 0.2, blue: 0.2 },
-                                    textFormat: {
-                                        foregroundColor: { red: 1, green: 1, blue: 1 },
-                                        bold: true
-                                    }
-                                }
-                            },
-                            fields: 'userEnteredFormat(backgroundColor,textFormat)'
+        // Format headers, set column widths, and add conditional formatting for fresh ads (1-2 days)
+        const formatRequests = [
+            // Bold headers with dark background
+            {
+                repeatCell: {
+                    range: {
+                        sheetId: sheetId,
+                        startRowIndex: 0,
+                        endRowIndex: 1
+                    },
+                    cell: {
+                        userEnteredFormat: {
+                            backgroundColor: { red: 0.2, green: 0.2, blue: 0.2 },
+                            textFormat: {
+                                foregroundColor: { red: 1, green: 1, blue: 1 },
+                                bold: true
+                            }
                         }
                     },
-                    {
-                        updateSheetProperties: {
-                            properties: {
-                                sheetId: 0,
-                                gridProperties: { frozenRowCount: 1 }
-                            },
-                            fields: 'gridProperties.frozenRowCount'
-                        }
+                    fields: 'userEnteredFormat(backgroundColor,textFormat)'
+                }
+            },
+            // Freeze first row
+            {
+                updateSheetProperties: {
+                    properties: {
+                        sheetId: sheetId,
+                        gridProperties: { frozenRowCount: 1 }
                     },
-                    // Set width for Image Preview column (A)
-                    {
-                        updateDimensionProperties: {
-                            range: {
-                                sheetId: 0,
-                                dimension: 'COLUMNS',
-                                startIndex: 0,
-                                endIndex: 1
-                            },
-                            properties: {
-                                pixelSize: 200
-                            },
-                            fields: 'pixelSize'
-                        }
+                    fields: 'gridProperties.frozenRowCount'
+                }
+            },
+            // Set width for Image Preview column (A)
+            {
+                updateDimensionProperties: {
+                    range: {
+                        sheetId: sheetId,
+                        dimension: 'COLUMNS',
+                        startIndex: 0,
+                        endIndex: 1
                     },
-                    // Set width for Video Thumbnail column (B)
-                    {
-                        updateDimensionProperties: {
-                            range: {
-                                sheetId: 0,
-                                dimension: 'COLUMNS',
-                                startIndex: 1,
-                                endIndex: 2
-                            },
-                            properties: {
-                                pixelSize: 200
-                            },
-                            fields: 'pixelSize'
-                        }
+                    properties: {
+                        pixelSize: 200
                     },
-                    // Set default row height for better preview display
-                    {
-                        updateDimensionProperties: {
-                            range: {
-                                sheetId: 0,
-                                dimension: 'ROWS',
-                                startIndex: 1,
-                                endIndex: rows.length + 1
-                            },
-                            properties: {
-                                pixelSize: 150
-                            },
-                            fields: 'pixelSize'
+                    fields: 'pixelSize'
+                }
+            },
+            // Set width for Video Thumbnail column (B)
+            {
+                updateDimensionProperties: {
+                    range: {
+                        sheetId: sheetId,
+                        dimension: 'COLUMNS',
+                        startIndex: 1,
+                        endIndex: 2
+                    },
+                    properties: {
+                        pixelSize: 200
+                    },
+                    fields: 'pixelSize'
+                }
+            },
+            // Set default row height for better preview display
+            {
+                updateDimensionProperties: {
+                    range: {
+                        sheetId: sheetId,
+                        dimension: 'ROWS',
+                        startIndex: 1,
+                        endIndex: rows.length + 1
+                    },
+                    properties: {
+                        pixelSize: 150
+                    },
+                    fields: 'pixelSize'
+                }
+            }
+        ];
+
+        // Add conditional formatting for fresh ads (1-2 days old) - light green
+        // Active Days is column F (index 5, which is column letter F)
+        // Using custom formula to highlight entire row based on Active Days value
+        formatRequests.push({
+            addConditionalFormatRule: {
+                rule: {
+                    ranges: [{
+                        sheetId: sheetId,
+                        startRowIndex: 1,
+                        endRowIndex: rows.length + 1,
+                        startColumnIndex: 0,
+                        endColumnIndex: headers.length
+                    }],
+                    booleanRule: {
+                        condition: {
+                            type: 'CUSTOM_FORMULA',
+                            values: [
+                                { userEnteredValue: '=AND($F2>=1, $F2<=2)' }  // Column F = Active Days
+                            ]
+                        },
+                        format: {
+                            backgroundColor: { red: 0.85, green: 0.95, blue: 0.85 }  // Light green
                         }
                     }
-                ]
+                },
+                index: 0
             }
         });
 
-        console.log(`✅ Successfully exported ${rows.length} ads to Google Sheets`);
-        console.log(`🔗 View your data: https://docs.google.com/spreadsheets/d/${spreadsheetId}`);
-        
-        return true;
-    } catch (error) {
-        console.error('❌ Google Sheets export failed:', error.message);
-        if (error.response) {
-            console.error('API Response:', error.response.data);
-        }
-        return false;
-    }
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+                requests: formatRequests
+            }
+        });
+
+        console.log(`✅ Exported ${rows.length} ads to sheet "${sheetName}"`);
 }
 
 // Add requests - use direct URLs if provided, otherwise search terms
@@ -939,10 +1017,22 @@ if (enableGoogleSheets) {
         if (validAds.length > 0) {
             console.log(`📋 Found ${validAds.length} ads to export`);
             
-            const exportSuccess = await exportToGoogleSheets(
-                validAds,
+            // Group ads by competitor
+            const adsByCompetitor = {};
+            validAds.forEach(ad => {
+                const competitor = ad.competitorName || ad.searchTerm || 'Unknown';
+                if (!adsByCompetitor[competitor]) {
+                    adsByCompetitor[competitor] = [];
+                }
+                adsByCompetitor[competitor].push(ad);
+            });
+            
+            console.log(`📊 Grouped into ${Object.keys(adsByCompetitor).length} competitors`);
+            
+            // Export each competitor to separate sheet
+            const exportSuccess = await exportToGoogleSheetsByCompetitor(
+                adsByCompetitor,
                 googleSheetsSpreadsheetId,
-                googleSheetsName,
                 googleServiceAccountKey
             );
             

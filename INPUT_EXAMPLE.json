@@ -1,0 +1,12 @@
+{
+    "searchTerms": "kursus coding anak\nbelajar programming anak\ncoding untuk anak\nmath for kids indonesia\ndesign course kids\nscratch programming\nvisual programming anak\ndigital literacy anak\nrobotika anak\nSTEM education Indonesia",
+    "country": "ID",
+    "maxPages": 10,
+    "minActiveDays": 7,
+    "useProxy": false,
+    "enableGoogleSheets": true,
+    "googleSheetsSpreadsheetId": "1eTampXg4CjPCPD5q6-GYIqcFeNQRHmdfScCL3zcvlIw",
+    "googleSheetsName": "Competitor Ads",
+    "googleServiceAccountKey": "PASTE_YOUR_SERVICE_ACCOUNT_JSON_HERE"
+}
+
