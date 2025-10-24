@@ -30,13 +30,12 @@ const searchTerms = searchTermsInput
 const useDirectUrls = competitorUrls && competitorUrls.length > 0;
 
 console.log('🚀 Competitor Ads Scraper');
-console.log('🔖 VERSION: 2025-10-24-DEBUG-v5 (Fixed indicators undefined error)');
+console.log('🔖 VERSION: 2025-10-24-v1.0 (Working! Data extraction + Google Sheets)');
 console.log('✅ Code successfully loaded from GitHub');
 console.log('─────────────────────────────────────────────────────');
 if (useDirectUrls) {
     console.log(`📊 Mode: Direct competitor URLs (${competitorUrls.length} competitors)`);
-    console.log(`🧪 DEBUG MODE: Processing only first 3 competitors`);
-    console.log(`📋 Competitors: ${competitorUrls.slice(0, 3).map(c => c.name).join(', ')}`);
+    console.log(`📋 Competitors: ${competitorUrls.map(c => c.name).join(', ')}`);
 } else {
     console.log(`📊 Search terms: ${searchTerms.join(', ')}`);
 }
@@ -756,7 +755,7 @@ const crawlerOptions = {
         }
     },
     
-    maxRequestsPerCrawl: 3, // TESTING: Process only first 3 competitors for debugging
+    maxRequestsPerCrawl: useDirectUrls ? competitorUrls.length : searchTerms.length, // Process all competitors
     maxConcurrency: 1,
     requestHandlerTimeoutSecs: 600 // Extended for discovery process
 };
@@ -1062,34 +1061,9 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             }
         ];
 
-        // Add conditional formatting for fresh ads (1-2 days old) - light green
-        // Active Days is column F (index 5, which is column letter F)
-        // Using custom formula to highlight entire row based on Active Days value
-        formatRequests.push({
-            addConditionalFormatRule: {
-                rule: {
-                    ranges: [{
-                        sheetId: sheetId,
-                        startRowIndex: 1,
-                        endRowIndex: rows.length + 1,
-                        startColumnIndex: 0,
-                        endColumnIndex: headers.length
-                    }],
-                    booleanRule: {
-                        condition: {
-                            type: 'CUSTOM_FORMULA',
-                            values: [
-                                { userEnteredValue: '=AND($F2>=1, $F2<=2)' }  // Column F = Active Days
-                            ]
-                        },
-                        format: {
-                            backgroundColor: { red: 0.85, green: 0.95, blue: 0.85 }  // Light green
-                        }
-                    }
-                },
-                index: 0
-            }
-        });
+        // Note: Conditional formatting for fresh ads (1-2 days) can be added manually in Google Sheets
+        // Format > Conditional formatting > Custom formula: =$F2<=2
+        // (Google Sheets API has limitations with complex formulas)
 
         await sheets.spreadsheets.batchUpdate({
             spreadsheetId,
