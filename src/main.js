@@ -30,7 +30,7 @@ const searchTerms = searchTermsInput
 const useDirectUrls = competitorUrls && competitorUrls.length > 0;
 
 console.log('🚀 Competitor Ads Scraper');
-console.log('🔖 VERSION: 2025-10-24-DEBUG-v3 (Debug samples + rejection tracking)');
+console.log('🔖 VERSION: 2025-10-24-DEBUG-v4 (Error tracking in extraction loop)');
 console.log('✅ Code successfully loaded from GitHub');
 console.log('─────────────────────────────────────────────────────');
 if (useDirectUrls) {
@@ -228,9 +228,15 @@ const crawlerOptions = {
                 // Track why ads are rejected
                 const rejectionReasons = [];
                 const debugSamples = []; // Store first 3 for debugging
+                const errors = []; // Track errors
+                
+                console.log(`Starting to process ${potentialAdContainers.length} containers...`);
                 
                 potentialAdContainers.forEach((container, index) => {
                     try {
+                        if (index === 0) {
+                            console.log('Processing first container...');
+                        }
                         // Extract all available information
                         const advertiserInfo = extractAdvertiserInfo(container);
                         const adContent = extractAdContent(container);
@@ -313,9 +319,18 @@ const crawlerOptions = {
                         }
                         
                     } catch (error) {
-                        console.log('Error processing container:', error);
+                        errors.push({
+                            index: index,
+                            message: error.message || String(error),
+                            stack: error.stack || ''
+                        });
+                        if (index < 3) {
+                            console.log(`Error in container ${index}:`, error.message);
+                        }
                     }
                 });
+                
+                console.log(`Finished processing. Ads found: ${ads.length}, Errors: ${errors.length}`);
                 
                 // HELPER FUNCTIONS
                 
@@ -650,6 +665,8 @@ const crawlerOptions = {
                         potentialAdContainers: potentialAdContainers.length,
                         rejectionReasons: reasonCounts,
                         debugSamples: debugSamples,
+                        errors: errors.slice(0, 5), // First 5 errors
+                        totalErrors: errors.length,
                         pageUrl: window.location.href,
                         pageTitle: document.title
                     }
@@ -681,10 +698,22 @@ const crawlerOptions = {
             }
             
             console.log('\n📊 Rejection Summary:');
-            if (discoveredAdsResult.debug.rejectionReasons) {
+            if (discoveredAdsResult.debug.rejectionReasons && Object.keys(discoveredAdsResult.debug.rejectionReasons).length > 0) {
                 Object.entries(discoveredAdsResult.debug.rejectionReasons).forEach(([reason, count]) => {
                     console.log(`  ${reason}: ${count}`);
                 });
+            } else {
+                console.log('  No rejection data available');
+            }
+            
+            // Log errors if any
+            if (discoveredAdsResult.debug.totalErrors > 0) {
+                console.log(`\n❌ Errors during extraction: ${discoveredAdsResult.debug.totalErrors}`);
+                if (discoveredAdsResult.debug.errors && discoveredAdsResult.debug.errors.length > 0) {
+                    discoveredAdsResult.debug.errors.forEach(err => {
+                        console.log(`  Container ${err.index}: ${err.message}`);
+                    });
+                }
             }
             
             const discoveredAds = discoveredAdsResult.ads;
