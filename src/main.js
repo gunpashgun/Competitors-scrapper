@@ -221,6 +221,9 @@ const crawlerOptions = {
                 
                 console.log(`Found ${potentialAdContainers.length} potential ad containers`);
                 
+                // Track why ads are rejected
+                const rejectionReasons = [];
+                
                 potentialAdContainers.forEach((container, index) => {
                     try {
                         // Extract all available information
@@ -229,6 +232,15 @@ const crawlerOptions = {
                         const mediaAssets = extractMediaAssets(container);
                         const activeDays = extractActiveDays(container);
                         
+                        // Debug first 3 containers
+                        if (index < 3) {
+                            console.log(`\nContainer ${index}:`);
+                            console.log(`  Advertiser: "${advertiserInfo.name}"`);
+                            console.log(`  Ad text length: ${adContent.text ? adContent.text.length : 0}`);
+                            console.log(`  Active days: ${activeDays}`);
+                            console.log(`  Images: ${mediaAssets.images.length}, Videos: ${mediaAssets.videos.length}`);
+                        }
+                        
                         // Simple filters: just check if we have basic data and meets min days
                         const hasBasicData = advertiserInfo.name && 
                                             advertiserInfo.name !== 'Unknown' &&
@@ -236,6 +248,17 @@ const crawlerOptions = {
                                             adContent.text &&
                                             adContent.text.length > 30 &&
                                             activeDays >= minDays;
+                        
+                        // Track rejection reasons
+                        if (!hasBasicData) {
+                            let reason = '';
+                            if (!advertiserInfo.name || advertiserInfo.name === 'Unknown') reason = 'No advertiser name';
+                            else if (advertiserInfo.name === 'Meta Ad Library') reason = 'Meta Ad Library';
+                            else if (!adContent.text) reason = 'No ad text';
+                            else if (adContent.text.length <= 30) reason = 'Text too short';
+                            else if (activeDays < minDays) reason = `Active days ${activeDays} < ${minDays}`;
+                            rejectionReasons.push(reason);
+                        }
                         
                         if (hasBasicData) {
                             const kidsData = extractKidsEdTechData(adContent.text);
@@ -598,6 +621,17 @@ const crawlerOptions = {
                     return highestResVideos.filter(Boolean);
                 }
                 
+                // Log rejection reasons summary
+                console.log(`\n📊 Rejection summary (out of ${potentialAdContainers.length} containers):`);
+                const reasonCounts = {};
+                rejectionReasons.forEach(r => {
+                    reasonCounts[r] = (reasonCounts[r] || 0) + 1;
+                });
+                Object.entries(reasonCounts).forEach(([reason, count]) => {
+                    console.log(`  ${reason}: ${count}`);
+                });
+                console.log(`  Accepted: ${ads.length}`);
+                
                 // Return both ads and debug info
                 return {
                     ads: ads.slice(0, 15), // Limit to 15 ads per competitor to save memory
@@ -605,6 +639,7 @@ const crawlerOptions = {
                         selectorCounts: testSelectors,
                         totalContainers: allContainers.length,
                         potentialAdContainers: potentialAdContainers.length,
+                        rejectionReasons: reasonCounts,
                         pageUrl: window.location.href,
                         pageTitle: document.title
                     }
@@ -619,6 +654,7 @@ const crawlerOptions = {
             console.log(`   Selector counts:`, JSON.stringify(discoveredAdsResult.debug.selectorCounts));
             console.log(`   Total containers checked: ${discoveredAdsResult.debug.totalContainers}`);
             console.log(`   Potential ad containers: ${discoveredAdsResult.debug.potentialAdContainers}`);
+            console.log(`   Rejection reasons:`, JSON.stringify(discoveredAdsResult.debug.rejectionReasons));
             
             const discoveredAds = discoveredAdsResult.ads;
             console.log(`🎯 Discovered ${discoveredAds.length} ads from "${displayName}"`);
