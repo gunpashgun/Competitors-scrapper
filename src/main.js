@@ -807,6 +807,8 @@ async function exportToGoogleSheets(data, spreadsheetId, sheetName, serviceAccou
 
         // Prepare data for sheets
         const headers = [
+            'Image Preview',
+            'Video Thumbnail',
             'Ad ID',
             'Advertiser Name',
             'Ad Text',
@@ -833,32 +835,47 @@ async function exportToGoogleSheets(data, spreadsheetId, sheetName, serviceAccou
             'Video URLs'
         ];
 
-        const rows = data.map(ad => [
-            ad.adId || '',
-            ad.advertiserName || '',
-            ad.adText || '',
-            ad.activeDays || 0,
-            ad.visualSummary?.totalImages || 0,
-            ad.visualSummary?.totalVideos || 0,
-            ad.visualSummary?.hasCarousel ? 'Yes' : 'No',
-            ad.visualSummary?.hasVideo ? 'Yes' : 'No',
-            ad.visualSummary?.dominantMediaType || '',
-            Array.isArray(ad.ageTargeting) ? ad.ageTargeting.join(', ') : '',
-            Array.isArray(ad.courseSubjects) ? ad.courseSubjects.join(', ') : '',
-            Array.isArray(ad.offers) ? ad.offers.join(', ') : '',
-            Array.isArray(ad.pricingInfo) ? ad.pricingInfo.join(', ') : '',
-            ad.adQualityScore || 0,
-            ad.contentRelevanceScore || 0,
-            ad.mediaQualityScore || 0,
-            ad.effectiveness_score || 0,
-            ad.content_type || '',
-            ad.age_focus || '',
-            ad.competitive_strength || '',
-            ad.searchTerm || '',
-            ad.scrapedAt || '',
-            Array.isArray(ad.allImageUrls) ? ad.allImageUrls.join('\n') : '',
-            Array.isArray(ad.allVideoUrls) ? ad.allVideoUrls.join('\n') : ''
-        ]);
+        const rows = data.map((ad, index) => {
+            // Get first image URL for preview
+            const firstImageUrl = Array.isArray(ad.allImageUrls) && ad.allImageUrls.length > 0 
+                ? ad.allImageUrls[0] 
+                : '';
+            
+            // Get video thumbnail from mediaAssets or first video thumbnail
+            const videoThumbnail = ad.mediaAssets?.thumbnails?.[0]?.url || 
+                                   ad.mediaAssets?.videos?.[0]?.thumbnailUrl || '';
+            
+            return [
+                // Image Preview - Google Sheets formula
+                firstImageUrl ? `=IMAGE("${firstImageUrl}", 1)` : '',
+                // Video Thumbnail Preview
+                videoThumbnail ? `=IMAGE("${videoThumbnail}", 1)` : '',
+                ad.adId || '',
+                ad.advertiserName || '',
+                ad.adText || '',
+                ad.activeDays || 0,
+                ad.visualSummary?.totalImages || 0,
+                ad.visualSummary?.totalVideos || 0,
+                ad.visualSummary?.hasCarousel ? 'Yes' : 'No',
+                ad.visualSummary?.hasVideo ? 'Yes' : 'No',
+                ad.visualSummary?.dominantMediaType || '',
+                Array.isArray(ad.ageTargeting) ? ad.ageTargeting.join(', ') : '',
+                Array.isArray(ad.courseSubjects) ? ad.courseSubjects.join(', ') : '',
+                Array.isArray(ad.offers) ? ad.offers.join(', ') : '',
+                Array.isArray(ad.pricingInfo) ? ad.pricingInfo.join(', ') : '',
+                ad.adQualityScore || 0,
+                ad.contentRelevanceScore || 0,
+                ad.mediaQualityScore || 0,
+                ad.effectiveness_score || 0,
+                ad.content_type || '',
+                ad.age_focus || '',
+                ad.competitive_strength || '',
+                ad.searchTerm || '',
+                ad.scrapedAt || '',
+                Array.isArray(ad.allImageUrls) ? ad.allImageUrls.join('\n') : '',
+                Array.isArray(ad.allVideoUrls) ? ad.allVideoUrls.join('\n') : ''
+            ];
+        });
 
         // Check if sheet exists, create if not
         try {
@@ -897,16 +914,17 @@ async function exportToGoogleSheets(data, spreadsheetId, sheetName, serviceAccou
         });
 
         // Write headers and data
+        // Use USER_ENTERED to interpret formulas (IMAGE function)
         await sheets.spreadsheets.values.update({
             spreadsheetId,
             range,
-            valueInputOption: 'RAW',
+            valueInputOption: 'USER_ENTERED',
             requestBody: {
                 values: [headers, ...rows]
             }
         });
 
-        // Format headers (bold, freeze row)
+        // Format headers (bold, freeze row) and set column widths for previews
         await sheets.spreadsheets.batchUpdate({
             spreadsheetId,
             requestBody: {
@@ -937,6 +955,51 @@ async function exportToGoogleSheets(data, spreadsheetId, sheetName, serviceAccou
                                 gridProperties: { frozenRowCount: 1 }
                             },
                             fields: 'gridProperties.frozenRowCount'
+                        }
+                    },
+                    // Set width for Image Preview column (A)
+                    {
+                        updateDimensionProperties: {
+                            range: {
+                                sheetId: 0,
+                                dimension: 'COLUMNS',
+                                startIndex: 0,
+                                endIndex: 1
+                            },
+                            properties: {
+                                pixelSize: 200
+                            },
+                            fields: 'pixelSize'
+                        }
+                    },
+                    // Set width for Video Thumbnail column (B)
+                    {
+                        updateDimensionProperties: {
+                            range: {
+                                sheetId: 0,
+                                dimension: 'COLUMNS',
+                                startIndex: 1,
+                                endIndex: 2
+                            },
+                            properties: {
+                                pixelSize: 200
+                            },
+                            fields: 'pixelSize'
+                        }
+                    },
+                    // Set default row height for better preview display
+                    {
+                        updateDimensionProperties: {
+                            range: {
+                                sheetId: 0,
+                                dimension: 'ROWS',
+                                startIndex: 1,
+                                endIndex: rows.length + 1
+                            },
+                            properties: {
+                                pixelSize: 150
+                            },
+                            fields: 'pixelSize'
                         }
                     }
                 ]
