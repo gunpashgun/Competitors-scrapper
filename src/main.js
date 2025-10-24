@@ -156,13 +156,35 @@ const crawlerOptions = {
             
             console.log('🕵️ Collecting all active ads...');
             
+            // Wait for ads to load - Facebook Ads Library takes time
+            console.log('⏳ Waiting for ads to load...');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
             // Reduced scrolling to save memory (was 20, now 10)
             await autoScroll(page, 10);
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            console.log('🔍 Checking page content...');
             
             // Collect ALL ads from the page (no filtering by quality)
             const discoveredAds = await page.evaluate((searchTermParam, minDays, competitorName, directUrl) => {
                 const ads = [];
+                
+                console.log('🔍 Starting ad discovery in browser context...');
+                console.log('Page URL:', window.location.href);
+                console.log('Page title:', document.title);
+                
+                // Check for different possible ad containers
+                const testSelectors = {
+                    dataTestid: document.querySelectorAll('[data-testid]').length,
+                    divs: document.querySelectorAll('div').length,
+                    images: document.querySelectorAll('img').length,
+                    videos: document.querySelectorAll('video').length,
+                    articles: document.querySelectorAll('article').length,
+                    adTestid: document.querySelectorAll('[data-testid*="ad"]').length,
+                    resultTestid: document.querySelectorAll('[data-testid*="result"]').length
+                };
+                console.log('Selector counts:', JSON.stringify(testSelectors));
                 
                 // Use standard CSS selectors only, then filter with JavaScript
                 const allContainers = [
@@ -176,6 +198,8 @@ const crawlerOptions = {
                     ...document.querySelectorAll('section')
                 ];
                 
+                console.log(`Total containers to check: ${allContainers.length}`);
+                
                 // Filter containers that look like ads using JavaScript
                 const potentialAdContainers = allContainers.filter(container => {
                     if (!container || !container.querySelector) return false;
@@ -186,7 +210,8 @@ const crawlerOptions = {
                     const hasText = container.textContent && container.textContent.trim().length > 50;
                     const hasSponsoredText = container.textContent && 
                         (container.textContent.toLowerCase().includes('sponsored') ||
-                         container.textContent.toLowerCase().includes('iklan'));
+                         container.textContent.toLowerCase().includes('iklan') ||
+                         container.textContent.toLowerCase().includes('started running'));
                     const hasPageName = container.querySelector('[data-testid*="page"]') !== null;
                     
                     // Must have media AND (sponsored text OR page name OR facebook link)
