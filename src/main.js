@@ -30,7 +30,7 @@ const searchTerms = searchTermsInput
 const useDirectUrls = competitorUrls && competitorUrls.length > 0;
 
 console.log('🚀 Competitor Ads Scraper');
-console.log('🔖 VERSION: 2025-10-24-v1.2 (Added ad link, removed bulk URLs)');
+console.log('🔖 VERSION: 2025-10-24-v1.3 (Fixed image extraction - exclude small icons)');
 console.log('✅ Code successfully loaded from GitHub');
 console.log('─────────────────────────────────────────────────────');
 if (useDirectUrls) {
@@ -418,6 +418,11 @@ const crawlerOptions = {
                             const width = img.naturalWidth || img.offsetWidth || 0;
                             const height = img.naturalHeight || img.offsetHeight || 0;
                             
+                            // Skip very small images (logos, icons) - must be at least 200x200
+                            if (width > 0 && height > 0 && (width < 200 || height < 200)) {
+                                return; // Skip this image
+                            }
+                            
                             media.images.push({
                                 url: src,
                                 alt: img.alt || '',
@@ -537,7 +542,9 @@ const crawlerOptions = {
                     
                     const excludePatterns = [
                         'profile_pic', 'favicon', '/images/emoji/', 'spinner', 'icon-',
-                        '_thumb', '_small', 'avatar', 'logo_', 'button'
+                        '_thumb', '_small', 'avatar', 'logo_', 'button',
+                        // Exclude small thumbnail sizes (60x60, 80x80, 120x120, etc.)
+                        's60x60', 's80x80', 's120x120', 's150x150', 's200x200'
                     ];
                     
                     return !excludePatterns.some(pattern => url.includes(pattern)) &&
