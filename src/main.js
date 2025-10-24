@@ -30,7 +30,7 @@ const searchTerms = searchTermsInput
 const useDirectUrls = competitorUrls && competitorUrls.length > 0;
 
 console.log('🚀 Competitor Ads Scraper');
-console.log('🔖 VERSION: 2025-10-24-v1.1 (Fixed IMAGE formula - URL in separate column)');
+console.log('🔖 VERSION: 2025-10-24-v1.2 (Added ad link, removed bulk URLs)');
 console.log('✅ Code successfully loaded from GitHub');
 console.log('─────────────────────────────────────────────────────');
 if (useDirectUrls) {
@@ -887,6 +887,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             'Ad ID',
             'Advertiser Name',
             'Ad Text',
+            'View Ad',
             'Active Days',
             'Total Images',
             'Total Videos',
@@ -898,9 +899,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             'Offers',
             'Pricing Info',
             'Search Term',
-            'Scraped At',
-            'All Image URLs',
-            'All Video URLs'
+            'Scraped At'
         ];
 
         const rows = data.map((ad, index) => {
@@ -915,6 +914,11 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             
             const rowNumber = index + 2; // +2 because row 1 is header, data starts at row 2
             
+            // Build Facebook Ads Library link
+            const adLibraryUrl = ad.libraryId 
+                ? `https://www.facebook.com/ads/library/?id=${ad.libraryId}`
+                : '';
+            
             return [
                 // Image Preview - formula references Image URL column (B)
                 firstImageUrl ? `=IMAGE(B${rowNumber})` : '',
@@ -927,6 +931,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                 ad.adId || '',
                 ad.advertiserName || '',
                 ad.adText || '',
+                adLibraryUrl || '',
                 ad.activeDays || 0,
                 ad.visualSummary?.totalImages || 0,
                 ad.visualSummary?.totalVideos || 0,
@@ -938,9 +943,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                 Array.isArray(ad.offers) ? ad.offers.join(', ') : '',
                 Array.isArray(ad.pricingInfo) ? ad.pricingInfo.join(', ') : '',
                 ad.searchTerm || ad.competitorName || '',
-                ad.scrapedAt || '',
-                Array.isArray(ad.allImageUrls) ? ad.allImageUrls.join('\n') : '',
-                Array.isArray(ad.allVideoUrls) ? ad.allVideoUrls.join('\n') : ''
+                ad.scrapedAt || ''
             ];
         });
 
