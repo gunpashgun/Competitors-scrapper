@@ -14,6 +14,7 @@ const {
     useProxy = false,
     saveMediaAssets = true,
     highResolutionOnly = true,
+    enableEngagementMatching = true,
     enableGoogleSheets = false,
     googleSheetsSpreadsheetId = '',
     googleSheetsName = 'Competitor Ads',
@@ -30,7 +31,7 @@ const searchTerms = searchTermsInput
 const useDirectUrls = competitorUrls && competitorUrls.length > 0;
 
 console.log('🚀 Competitor Ads Scraper');
-console.log('🔖 VERSION: 2025-11-01-v1.7 - LANDING PAGE + CTA + SCORING');
+console.log('🔖 VERSION: 2025-11-01-v1.9 - ENGAGEMENT + GREEN HIGHLIGHT');
 console.log('✅ Code successfully loaded from GitHub');
 console.log('─────────────────────────────────────────────────────');
 if (useDirectUrls) {
@@ -41,6 +42,7 @@ console.log(`📊 Search terms: ${searchTerms.join(', ')}`);
 }
 console.log(`🎯 Goal: Collect ALL active ads from competitors`);
 console.log(`⏱️ Minimum active days: ${minActiveDays}`);
+console.log(`💬 Engagement matching: ${enableEngagementMatching ? 'ENABLED (will scrape organic posts)' : 'DISABLED'}`);
 
 // Set up proxy if requested
 let proxyConfiguration = null;
@@ -777,6 +779,57 @@ const crawlerOptions = {
                 }));
                 
                 console.log(`✅ Successfully collected ${enrichedAds.length} ads from ${advertisers.length} unique advertisers`);
+                
+                // Try to match ads with organic posts for engagement metrics
+                if (enableEngagementMatching && enrichedAds.length > 0 && competitorName) {
+                    try {
+                        console.log(`\n🔗 Attempting to match ads with organic posts for engagement metrics...`);
+                        
+                        // Try to find the Facebook page URL for this competitor
+                        // Common patterns: facebook.com/CompanyName or extracted from ads
+                        const pageUrl = `https://www.facebook.com/${competitorName.replace(/\s+/g, '')}`;
+                        
+                        console.log(`📱 Attempting to scrape organic posts from: ${pageUrl}`);
+                        
+                        // Scrape organic posts from the competitor's page
+                        const organicPosts = await scrapeOrganicPostsFromPage(page, pageUrl, 50);
+                        
+                        if (organicPosts.length > 0) {
+                            console.log(`✅ Found ${organicPosts.length} organic posts`);
+                            
+                            // Match ads to organic posts
+                            const adsWithEngagement = await matchAdsToOrganicPosts(enrichedAds, organicPosts);
+                            
+                            // Update enrichedAds with engagement data
+                            enrichedAds.splice(0, enrichedAds.length, ...adsWithEngagement);
+                            
+                            console.log(`🎯 Engagement matching complete!`);
+                        } else {
+                            console.log(`⚠️ No organic posts found on page`);
+                            // Add default engagement fields
+                            enrichedAds.forEach(ad => {
+                                ad.engagementMatched = false;
+                                ad.engagementSource = 'page_not_accessible';
+                                ad.reactionsTotal = null;
+                                ad.commentsTotal = null;
+                                ad.sharesTotal = null;
+                                ad.matchScore = 0;
+                            });
+                        }
+                    } catch (error) {
+                        console.log(`⚠️ Failed to match engagement: ${error.message}`);
+                        // Add default engagement fields
+                        enrichedAds.forEach(ad => {
+                            ad.engagementMatched = false;
+                            ad.engagementSource = 'error_during_matching';
+                            ad.reactionsTotal = null;
+                            ad.commentsTotal = null;
+                            ad.sharesTotal = null;
+                            ad.matchScore = 0;
+                        });
+                    }
+                }
+                
                 await Actor.pushData(enrichedAds);
             } else {
                 console.log(`⚠️ No ads found for "${displayName}"`);
@@ -850,6 +903,279 @@ async function autoScroll(page, maxScrolls = 15) {
     } catch (error) {
         console.log('Scroll failed:', error.message);
     }
+}
+
+/**
+ * Scrape organic posts from Facebook page
+ * Collects recent posts with engagement metrics (likes, comments, shares)
+ */
+async function scrapeOrganicPostsFromPage(page, pageUrl, maxPosts = 50) {
+    console.log(`📱 Scraping organic posts from: ${pageUrl}`);
+    
+    try {
+        await page.goto(pageUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Close any consent banners
+        try {
+            await page.evaluate(() => {
+                const bannerSelectors = [
+                    '[data-testid*="cookie"]',
+                    '[data-testid*="consent"]',
+                    '[aria-label*="Close"]',
+                    'button:has-text("Allow")',
+                    'button:has-text("Accept")'
+                ];
+                bannerSelectors.forEach(selector => {
+                    document.querySelectorAll(selector).forEach(el => {
+                        try { el.click(); } catch(e) {}
+                    });
+                });
+            });
+        } catch (e) {
+            console.log('No consent banner or failed to close');
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Scroll to load posts (max 5 scrolls to avoid blocks)
+        for (let i = 0; i < 5; i++) {
+            await page.evaluate(() => window.scrollBy(0, 1000));
+            await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+        }
+        
+        // Extract posts with engagement
+        const posts = await page.evaluate((maxPostsLimit) => {
+            const results = [];
+            
+            // Find all post containers
+            const postContainers = Array.from(document.querySelectorAll('[data-testid="pagelet"], [role="article"], div[data-ad-preview]'));
+            
+            console.log(`Found ${postContainers.length} potential post containers`);
+            
+            for (const container of postContainers.slice(0, maxPostsLimit)) {
+                try {
+                    // Extract text
+                    const textElements = container.querySelectorAll('[data-ad-comet-preview="message"], [data-ad-preview="message"], p, span');
+                    let postText = '';
+                    for (const el of textElements) {
+                        const text = el.textContent.trim();
+                        if (text.length > postText.length && text.length > 50) {
+                            postText = text;
+                        }
+                    }
+                    
+                    // Extract image URLs
+                    const images = Array.from(container.querySelectorAll('img'))
+                        .map(img => img.src)
+                        .filter(src => src && src.includes('scontent') && !src.includes('emoji'));
+                    
+                    // Extract engagement metrics - look for text patterns
+                    const fullText = container.textContent || '';
+                    
+                    // Parse reactions (Like, Love, etc.)
+                    let reactionsTotal = 0;
+                    const reactionsMatch = fullText.match(/(\d+[\.,]?\d*[KkMm]?)\s*(?:reactions?|likes?|нравится)/i);
+                    if (reactionsMatch) {
+                        reactionsTotal = parseMetricNumber(reactionsMatch[1]);
+                    }
+                    
+                    // Parse comments
+                    let commentsTotal = 0;
+                    const commentsMatch = fullText.match(/(\d+[\.,]?\d*[KkMm]?)\s*(?:comments?|комментари)/i);
+                    if (commentsMatch) {
+                        commentsTotal = parseMetricNumber(commentsMatch[1]);
+                    }
+                    
+                    // Parse shares
+                    let sharesTotal = 0;
+                    const sharesMatch = fullText.match(/(\d+[\.,]?\d*[KkMm]?)\s*(?:shares?|репост)/i);
+                    if (sharesMatch) {
+                        sharesTotal = parseMetricNumber(sharesMatch[1]);
+                    }
+                    
+                    // Check if sponsored
+                    const isSponsored = fullText.toLowerCase().includes('sponsored') || 
+                                       fullText.toLowerCase().includes('реклама') ||
+                                       container.querySelector('[data-ad-rendering-role]') !== null;
+                    
+                    // Extract post URL
+                    let postUrl = '';
+                    const postLinks = container.querySelectorAll('a[href*="/posts/"], a[href*="/photos/"], a[href*="/videos/"]');
+                    if (postLinks.length > 0) {
+                        postUrl = postLinks[0].href;
+                    }
+                    
+                    // Extract posted date (very approximate)
+                    const datePatterns = [
+                        /(\d+)\s*(?:hr|hour|ч|час)/i,
+                        /(\d+)\s*(?:min|minute|мин)/i,
+                        /(\d+)\s*(?:d|day|д|день|дня|дней)/i,
+                        /(\d+)\s*(?:w|week|нед)/i
+                    ];
+                    
+                    let postedAt = new Date().toISOString();
+                    for (const pattern of datePatterns) {
+                        const match = fullText.match(pattern);
+                        if (match) {
+                            const value = parseInt(match[1]);
+                            const now = new Date();
+                            if (pattern.source.includes('hr|hour')) {
+                                now.setHours(now.getHours() - value);
+                            } else if (pattern.source.includes('min')) {
+                                now.setMinutes(now.getMinutes() - value);
+                            } else if (pattern.source.includes('d|day')) {
+                                now.setDate(now.getDate() - value);
+                            } else if (pattern.source.includes('w|week')) {
+                                now.setDate(now.getDate() - (value * 7));
+                            }
+                            postedAt = now.toISOString();
+                            break;
+                        }
+                    }
+                    
+                    // Helper function to parse metric numbers (1.2K -> 1200)
+                    function parseMetricNumber(str) {
+                        if (!str) return 0;
+                        str = str.toString().trim().toUpperCase().replace(',', '.');
+                        const num = parseFloat(str);
+                        if (str.includes('K')) return Math.round(num * 1000);
+                        if (str.includes('M')) return Math.round(num * 1000000);
+                        return Math.round(num);
+                    }
+                    
+                    if (postText.length > 30 || images.length > 0) {
+                        results.push({
+                            postText: postText.substring(0, 600),
+                            postUrl: postUrl || '',
+                            images: images.slice(0, 3),
+                            reactionsTotal,
+                            commentsTotal,
+                            sharesTotal,
+                            isSponsored,
+                            postedAt,
+                            extractedAt: new Date().toISOString()
+                        });
+                    }
+                } catch (e) {
+                    console.log('Error extracting post:', e.message);
+                }
+            }
+            
+            return results;
+        }, maxPosts);
+        
+        console.log(`✅ Extracted ${posts.length} posts from page`);
+        return posts;
+        
+    } catch (error) {
+        console.log(`❌ Failed to scrape page ${pageUrl}:`, error.message);
+        return [];
+    }
+}
+
+/**
+ * Calculate text similarity between two strings (simple approach)
+ */
+function calculateTextSimilarity(text1, text2) {
+    if (!text1 || !text2) return 0;
+    
+    const normalize = (str) => str.toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .trim()
+        .substring(0, 300);
+    
+    const t1 = normalize(text1);
+    const t2 = normalize(text2);
+    
+    if (t1 === t2) return 1.0;
+    
+    // Simple word overlap similarity
+    const words1 = new Set(t1.split(/\s+/));
+    const words2 = new Set(t2.split(/\s+/));
+    
+    const intersection = new Set([...words1].filter(x => words2.has(x)));
+    const union = new Set([...words1, ...words2]);
+    
+    return intersection.size / union.size;
+}
+
+/**
+ * Match ads to organic posts to get engagement metrics
+ */
+async function matchAdsToOrganicPosts(ads, organicPosts) {
+    console.log(`🔗 Matching ${ads.length} ads to ${organicPosts.length} organic posts...`);
+    
+    let matchedCount = 0;
+    
+    for (const ad of ads) {
+        let bestMatch = null;
+        let bestScore = 0;
+        
+        for (const post of organicPosts) {
+            // Skip if post is sponsored (it's an ad, not organic)
+            if (post.isSponsored) continue;
+            
+            let score = 0;
+            
+            // Text similarity (weight: 0.6)
+            const textSim = calculateTextSimilarity(ad.adText, post.postText);
+            score += textSim * 0.6;
+            
+            // Image URL match (weight: 0.3)
+            if (ad.allImageUrls && ad.allImageUrls.length > 0 && post.images && post.images.length > 0) {
+                const adImage = ad.allImageUrls[0];
+                for (const postImage of post.images) {
+                    // Check if images are similar (same base URL pattern)
+                    if (adImage && postImage && 
+                        (adImage.includes(postImage.split('?')[0].split('/').pop()) ||
+                         postImage.includes(adImage.split('?')[0].split('/').pop()))) {
+                        score += 0.3;
+                        break;
+                    }
+                }
+            }
+            
+            // Date proximity (weight: 0.1) - within ±7 days
+            try {
+                const adDate = new Date(Date.now() - (ad.activeDays * 24 * 60 * 60 * 1000));
+                const postDate = new Date(post.postedAt);
+                const daysDiff = Math.abs((adDate - postDate) / (1000 * 60 * 60 * 24));
+                if (daysDiff <= 7) {
+                    score += 0.1 * (1 - daysDiff / 7);
+                }
+            } catch (e) {
+                // Date parsing failed, skip date score
+            }
+            
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = post;
+            }
+        }
+        
+        // If similarity > 70%, consider it a match
+        if (bestScore > 0.7 && bestMatch) {
+            ad.engagementMatched = true;
+            ad.engagementSource = 'organic_post';
+            ad.reactionsTotal = bestMatch.reactionsTotal;
+            ad.commentsTotal = bestMatch.commentsTotal;
+            ad.sharesTotal = bestMatch.sharesTotal;
+            ad.matchScore = Math.round(bestScore * 100);
+            ad.organicPostUrl = bestMatch.postUrl;
+            matchedCount++;
+        } else {
+            ad.engagementMatched = false;
+            ad.engagementSource = bestScore > 0.4 ? 'possible_dark_post' : 'not_found';
+            ad.reactionsTotal = null;
+            ad.commentsTotal = null;
+            ad.sharesTotal = null;
+            ad.matchScore = 0;
+        }
+    }
+    
+    console.log(`✅ Matched ${matchedCount} / ${ads.length} ads (${Math.round(matchedCount / ads.length * 100)}%)`);
+    return ads;
 }
 
 // Google Sheets Integration - Export each competitor to separate sheet
@@ -1015,6 +1341,12 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             'Landing Page URL',
             'CTA Button',
             'Active Days',
+            'Reactions',
+            'Comments',
+            'Shares',
+            'Engagement Match',
+            'Match Score %',
+            'Engagement Source',
             'Text Variants',
             'Image Variants',
             'Platform Count',
@@ -1053,9 +1385,9 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             
             // Score formula: (Active Days * 2) + (Text Variants * 3) + (Image Variants * 3) + 
             //                (Has Video ? 4 : 0) + (Platform Count > 1 ? 2 : 0) + (Same Image Count > 1 ? 5 : 0)
-            // Column mapping: L=Active Days, M=Text Variants, N=Image Variants, O=Platform Count, 
-            //                 P=Same Image Count, Q=Has Video, R=Score
-            const scoreFormula = `=L${rowNumber}*2+M${rowNumber}*3+N${rowNumber}*3+IF(Q${rowNumber}="Yes",4,0)+IF(O${rowNumber}>1,2,0)+IF(P${rowNumber}>1,5,0)`;
+            // Column mapping: L=Active Days, S=Text Variants, T=Image Variants, U=Platform Count, 
+            //                 V=Same Image Count, W=Has Video, X=Score
+            const scoreFormula = `=L${rowNumber}*2+S${rowNumber}*3+T${rowNumber}*3+IF(W${rowNumber}="Yes",4,0)+IF(U${rowNumber}>1,2,0)+IF(V${rowNumber}>1,5,0)`;
             
             return [
                 // Image Preview - formula references Image URL column (B)
@@ -1075,6 +1407,12 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                 ad.landingPageUrl || '',
                 ad.ctaButtonText || '',
                 ad.activeDays || 0,
+                ad.reactionsTotal !== null && ad.reactionsTotal !== undefined ? ad.reactionsTotal : '',
+                ad.commentsTotal !== null && ad.commentsTotal !== undefined ? ad.commentsTotal : '',
+                ad.sharesTotal !== null && ad.sharesTotal !== undefined ? ad.sharesTotal : '',
+                ad.engagementMatched ? 'Yes' : 'No',
+                ad.matchScore || 0,
+                ad.engagementSource || 'not_attempted',
                 metrics.textVariants || 0,
                 metrics.imageVariants || 0,
                 metrics.platformCount || 0,
@@ -1270,10 +1608,40 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                     },
                     fields: 'userEnteredFormat.wrapStrategy'
                 }
+            },
+            // Conditional formatting: Highlight rows GREEN where Active Days >= 10
+            {
+                addConditionalFormatRule: {
+                    rule: {
+                        ranges: [{
+                            sheetId: sheetId,
+                            startRowIndex: 1, // Skip header
+                            endRowIndex: sortedRows.length + 1,
+                            startColumnIndex: 0,
+                            endColumnIndex: headers.length
+                        }],
+                        booleanRule: {
+                            condition: {
+                                type: 'CUSTOM_FORMULA',
+                                values: [{
+                                    userEnteredValue: '=$L2>=10'  // Column L = Active Days
+                                }]
+                            },
+                            format: {
+                                backgroundColor: {
+                                    red: 0.72,   // Light green (#B8E0B8)
+                                    green: 0.88,
+                                    blue: 0.72
+                                }
+                            }
+                        }
+                    },
+                    index: 0
+                }
             }
         ];
 
-        // Note: Conditional formatting for fresh ads (1-2 days) can be added manually in Google Sheets
+        // Note: Green highlighting automatically applied for ads active >= 10 days
         // Format > Conditional formatting > Custom formula: =$J2<=2 (Column J = Active Days)
         // Data is auto-sorted by Active Days (newest first)
 

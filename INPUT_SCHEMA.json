@@ -44,6 +44,12 @@
             "description": "Enable residential proxy for better success rate ($10-20/month)",
             "default": false
         },
+        "enableEngagementMatching": {
+            "title": "Enable Engagement Matching",
+            "type": "boolean",
+            "description": "Attempt to match ads with organic posts to get engagement metrics (likes, comments, shares). May increase run time by 30-50%.",
+            "default": true
+        },
         "enableGoogleSheets": {
             "title": "Export to Google Sheets",
             "type": "boolean",

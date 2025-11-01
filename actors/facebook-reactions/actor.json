@@ -1,0 +1,39 @@
+{
+  "actorSpecification": 1,
+  "name": "facebook-reactions-scraper",
+  "title": "Facebook Reactions & Engagement Scraper",
+  "description": "Scrapes reactions, comments, and shares from public Facebook pages and posts without authentication. Designed for competitor analysis with anti-blocking measures.",
+  "version": "1.0.0",
+  "dockerfile": "./Dockerfile",
+  "input": "./input_schema.json",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "Facebook Reactions Dataset",
+      "views": {
+        "reactions": {
+          "title": "Reactions View",
+          "transformation": {
+            "fields": [
+              "page_url",
+              "post_id",
+              "post_url",
+              "posted_at",
+              "reactions_total",
+              "comments_total",
+              "shares_total",
+              "is_sponsored"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "environmentVariables": {
+    "REQUESTS_PER_MINUTE": "30",
+    "MAX_POSTS_PER_PAGE": "50",
+    "SINCE_DAYS": "30",
+    "USE_RESIDENTIAL_PROXY": "false"
+  }
+}
+
