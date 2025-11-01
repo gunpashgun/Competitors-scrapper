@@ -1,0 +1,115 @@
+[
+  {
+    "page_name": "Kodland Indonesia",
+    "ad_id": "KL_001",
+    "ad_delivery_start_time": "2025-09-15",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/kodland_hero_v1.jpg",
+      "video_url": null,
+      "body": "Belajar coding untuk anak 7-17 tahun! Kursus online interaktif dengan instruktur profesional. Scratch, Python, Game Development. Daftar trial gratis!",
+      "call_to_action_type": "LEARN_MORE"
+    },
+    "platforms": ["facebook", "instagram"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=KL_001"
+  },
+  {
+    "page_name": "Kodland Indonesia",
+    "ad_id": "KL_002",
+    "ad_delivery_start_time": "2025-09-15",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/kodland_hero_v1.jpg",
+      "video_url": null,
+      "body": "Kursus programming anak Indonesia! Belajar Scratch, Python, dan Game Dev dari rumah. Instruktur berpengalaman. Free trial class!",
+      "call_to_action_type": "SIGN_UP"
+    },
+    "platforms": ["facebook", "instagram"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=KL_002"
+  },
+  {
+    "page_name": "Kodland Indonesia",
+    "ad_id": "KL_003",
+    "ad_delivery_start_time": "2025-09-15",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/kodland_kids_coding.jpg",
+      "video_url": null,
+      "body": "Belajar coding untuk anak 7-17 tahun! Kursus online interaktif dengan instruktur profesional. Scratch, Python, Game Development. Daftar trial gratis!",
+      "call_to_action_type": "LEARN_MORE"
+    },
+    "platforms": ["facebook", "instagram"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=KL_003"
+  },
+  {
+    "page_name": "Kodland Indonesia",
+    "ad_id": "KL_004",
+    "ad_delivery_start_time": "2025-10-01",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/kodland_promo_oct.jpg",
+      "video_url": "https://video.xx.fbcdn.net/kodland_video_intro.mp4",
+      "body": "🎓 Kursus coding online untuk anak! Materi interaktif, project-based learning, sertifikat internasional. Diskon 30% untuk pendaftaran bulan ini!",
+      "call_to_action_type": "LEARN_MORE"
+    },
+    "platforms": ["facebook", "instagram", "messenger"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=KL_004"
+  },
+  {
+    "page_name": "Kodland Indonesia",
+    "ad_id": "KL_005",
+    "ad_delivery_start_time": "2025-08-20",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/kodland_success_stories.jpg",
+      "video_url": "https://video.xx.fbcdn.net/kodland_testimonial.mp4",
+      "body": "2000+ siswa sudah belajar coding di Kodland Indonesia! Lihat transformasi mereka dari pemula jadi young developer. Kelas trial gratis tersedia!",
+      "call_to_action_type": "SIGN_UP"
+    },
+    "platforms": ["facebook", "instagram", "messenger"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=KL_005"
+  },
+  {
+    "page_name": "Kodland Indonesia",
+    "ad_id": "KL_006",
+    "ad_delivery_start_time": "2025-10-10",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/kodland_scratch_kids.jpg",
+      "video_url": null,
+      "body": "Scratch programming untuk anak usia 7-10 tahun! Visual coding yang fun dan mudah dipahami. Buat game dan animasi sendiri!",
+      "call_to_action_type": "LEARN_MORE"
+    },
+    "platforms": ["facebook"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=KL_006"
+  },
+  {
+    "page_name": "Kodland Indonesia",
+    "ad_id": "KL_007",
+    "ad_delivery_start_time": "2025-10-12",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/kodland_python_teens.jpg",
+      "video_url": null,
+      "body": "Python untuk remaja 11-17 tahun! Belajar programming language yang paling populer di dunia. Build real projects!",
+      "call_to_action_type": "APPLY_NOW"
+    },
+    "platforms": ["facebook", "instagram"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=KL_007"
+  },
+  {
+    "page_name": "Kodland Indonesia",
+    "ad_id": "KL_008",
+    "ad_delivery_start_time": "2025-10-12",
+    "ad_delivery_stop_time": null,
+    "creative": {
+      "image_url": "https://scontent.xx.fbcdn.net/kodland_gamedev.jpg",
+      "video_url": null,
+      "body": "Game Development untuk anak! Buat game sendiri dengan Unity dan Roblox. Dari idea sampai published game!",
+      "call_to_action_type": "LEARN_MORE"
+    },
+    "platforms": ["facebook", "instagram"],
+    "ad_snapshot_url": "https://www.facebook.com/ads/library/?id=KL_008"
+  }
+]
+

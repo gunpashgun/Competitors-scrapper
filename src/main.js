@@ -30,14 +30,14 @@ const searchTerms = searchTermsInput
 const useDirectUrls = competitorUrls && competitorUrls.length > 0;
 
 console.log('🚀 Competitor Ads Scraper');
-console.log('🔖 VERSION: 2025-10-24-v1.5 PRODUCTION READY');
+console.log('🔖 VERSION: 2025-11-01-v1.7 - LANDING PAGE + CTA + SCORING');
 console.log('✅ Code successfully loaded from GitHub');
 console.log('─────────────────────────────────────────────────────');
 if (useDirectUrls) {
     console.log(`📊 Mode: Direct competitor URLs (${competitorUrls.length} competitors)`);
     console.log(`📋 Processing: ${competitorUrls.map(c => c.name).join(', ')}`);
 } else {
-    console.log(`📊 Search terms: ${searchTerms.join(', ')}`);
+console.log(`📊 Search terms: ${searchTerms.join(', ')}`);
 }
 console.log(`🎯 Goal: Collect ALL active ads from competitors`);
 console.log(`⏱️ Minimum active days: ${minActiveDays}`);
@@ -257,7 +257,7 @@ const crawlerOptions = {
                         
                         // Simple filters: just check if we have basic data and meets min days
                         const hasBasicData = advertiserInfo.name && 
-                                            advertiserInfo.name !== 'Unknown' &&
+                            advertiserInfo.name !== 'Unknown' &&
                                             advertiserInfo.name !== 'Meta Ad Library' &&
                                             adContent.text &&
                                             adContent.text.length > 30 &&
@@ -283,6 +283,8 @@ const crawlerOptions = {
                                 libraryId: adContent.libraryId,
                                 advertiserName: advertiserInfo.name,
                                 adText: adContent.text.substring(0, 600),
+                                landingPageUrl: adContent.landingPageUrl || '',
+                                ctaButtonText: adContent.ctaButtonText || '',
                                 
                                 // Media assets
                                 mediaAssets: mediaAssets,
@@ -374,6 +376,8 @@ const crawlerOptions = {
                     
                     let adText = '';
                     let libraryId = null;
+                    let landingPageUrl = '';
+                    let ctaButtonText = '';
                     
                     // Find any substantial text content (no keyword filtering)
                     for (const selector of textSelectors) {
@@ -383,8 +387,8 @@ const crawlerOptions = {
                             const text = element.textContent.trim();
                             // Take any text with reasonable length
                             if (text.length > 50) {
-                                adText = text;
-                                break;
+                                    adText = text;
+                                    break;
                             }
                         }
                         
@@ -399,7 +403,55 @@ const crawlerOptions = {
                         libraryId = libIdMatch[1];
                     }
                     
-                    return { text: adText, libraryId: libraryId };
+                    // Extract Landing Page URL - look for external links (not facebook.com)
+                    const allLinks = container.querySelectorAll('a[href]');
+                    for (const link of allLinks) {
+                        const href = link.getAttribute('href') || '';
+                        // Skip facebook internal links
+                        if (href && 
+                            !href.includes('facebook.com') && 
+                            !href.includes('instagram.com') &&
+                            !href.startsWith('#') &&
+                            (href.startsWith('http') || href.startsWith('www'))) {
+                            landingPageUrl = href;
+                            break;
+                        }
+                    }
+                    
+                    // Extract CTA Button Text - common patterns
+                    const ctaSelectors = [
+                        'a[role="button"]',
+                        'button',
+                        '[data-testid*="cta"]',
+                        '[data-testid*="button"]',
+                        '.cta-button',
+                        'a[href*="http"]:not([href*="facebook.com"])'
+                    ];
+                    
+                    for (const selector of ctaSelectors) {
+                        const ctaElement = container.querySelector(selector);
+                        if (ctaElement) {
+                            const btnText = ctaElement.textContent.trim();
+                            // Common CTA patterns
+                            if (btnText && btnText.length > 2 && btnText.length < 50) {
+                                const ctaKeywords = ['learn', 'sign', 'get', 'join', 'start', 'shop', 'buy', 
+                                                    'daftar', 'gabung', 'mulai', 'lihat', 'download', 
+                                                    'apply', 'register', 'book', 'узнать', 'записаться'];
+                                const lowerText = btnText.toLowerCase();
+                                if (ctaKeywords.some(kw => lowerText.includes(kw))) {
+                                    ctaButtonText = btnText;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    return { 
+                        text: adText, 
+                        libraryId: libraryId,
+                        landingPageUrl: landingPageUrl,
+                        ctaButtonText: ctaButtonText
+                    };
                 }
                 
                 function extractMediaAssets(container) {
@@ -883,7 +935,72 @@ async function exportToGoogleSheetsByCompetitor(adsByCompetitor, spreadsheetId, 
     }
 }
 
+/**
+ * Calculate scoring metrics for ads
+ * Analyzes patterns across ads to compute effectiveness scores
+ */
+function calculateScoringMetrics(ads) {
+    // Build lookup maps for variant analysis
+    const imageToTexts = new Map(); // image_url -> Set of ad_text
+    const textToImages = new Map(); // ad_text -> Set of image_url
+    const imageFrequency = new Map(); // image_url -> count
+    
+    // First pass: build maps
+    ads.forEach(ad => {
+        const imageUrl = ad.allImageUrls?.[0] || '';
+        const adText = ad.adText || '';
+        
+        if (imageUrl) {
+            if (!imageToTexts.has(imageUrl)) {
+                imageToTexts.set(imageUrl, new Set());
+            }
+            if (adText) {
+                imageToTexts.get(imageUrl).add(adText);
+            }
+            imageFrequency.set(imageUrl, (imageFrequency.get(imageUrl) || 0) + 1);
+        }
+        
+        if (adText) {
+            if (!textToImages.has(adText)) {
+                textToImages.set(adText, new Set());
+            }
+            if (imageUrl) {
+                textToImages.get(adText).add(imageUrl);
+            }
+        }
+    });
+    
+    // Second pass: add metrics to each ad
+    return ads.map(ad => {
+        const imageUrl = ad.allImageUrls?.[0] || '';
+        const adText = ad.adText || '';
+        const hasVideo = ad.visualSummary?.hasVideo || false;
+        
+        // Calculate metrics
+        const textVariants = imageUrl ? (imageToTexts.get(imageUrl)?.size || 0) : 0;
+        const imageVariants = adText ? (textToImages.get(adText)?.size || 0) : 0;
+        const sameImageCount = imageUrl ? (imageFrequency.get(imageUrl) || 0) : 0;
+        
+        // Platform count - count unique platforms
+        const platformCount = ad.platforms?.length || 0;
+        
+        return {
+            ...ad,
+            scoringMetrics: {
+                textVariants,
+                imageVariants,
+                sameImageCount,
+                platformCount,
+                hasVideo
+            }
+        };
+    });
+}
+
 async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, data) {
+        // Calculate scoring metrics first
+        const dataWithScoring = calculateScoringMetrics(data);
+        
         // Prepare data for sheets
         const headers = [
             'Image Preview',
@@ -895,11 +1012,18 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             'Ad Text',
             'Ad Text Eng',
             'View Ad',
+            'Landing Page URL',
+            'CTA Button',
             'Active Days',
+            'Text Variants',
+            'Image Variants',
+            'Platform Count',
+            'Same Image Count',
+            'Has Video',
+            'Score',
             'Total Images',
             'Total Videos',
             'Has Carousel',
-            'Has Video',
             'Media Type',
             'Age Targeting',
             'Course Subjects',
@@ -907,7 +1031,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
             'Search Term'
         ];
 
-        const rows = data.map((ad, index) => {
+        const rows = dataWithScoring.map((ad, index) => {
             // Get first image URL for preview
             const firstImageUrl = Array.isArray(ad.allImageUrls) && ad.allImageUrls.length > 0 
                 ? ad.allImageUrls[0] 
@@ -924,6 +1048,15 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                 ? `https://www.facebook.com/ads/library/?id=${ad.libraryId}`
                 : '';
             
+            // Get scoring metrics
+            const metrics = ad.scoringMetrics || {};
+            
+            // Score formula: (Active Days * 2) + (Text Variants * 3) + (Image Variants * 3) + 
+            //                (Has Video ? 4 : 0) + (Platform Count > 1 ? 2 : 0) + (Same Image Count > 1 ? 5 : 0)
+            // Column mapping: L=Active Days, M=Text Variants, N=Image Variants, O=Platform Count, 
+            //                 P=Same Image Count, Q=Has Video, R=Score
+            const scoreFormula = `=L${rowNumber}*2+M${rowNumber}*3+N${rowNumber}*3+IF(Q${rowNumber}="Yes",4,0)+IF(O${rowNumber}>1,2,0)+IF(P${rowNumber}>1,5,0)`;
+            
             return [
                 // Image Preview - formula references Image URL column (B)
                 firstImageUrl ? `=IMAGE(B${rowNumber})` : '',
@@ -939,11 +1072,18 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                 // English translation formula - translates from column G (Ad Text)
                 ad.adText ? `=GOOGLETRANSLATE(G${rowNumber}; "ID"; "en")` : '',
                 adLibraryUrl || '',
+                ad.landingPageUrl || '',
+                ad.ctaButtonText || '',
                 ad.activeDays || 0,
+                metrics.textVariants || 0,
+                metrics.imageVariants || 0,
+                metrics.platformCount || 0,
+                metrics.sameImageCount || 0,
+                metrics.hasVideo ? 'Yes' : 'No',
+                scoreFormula,
                 ad.visualSummary?.totalImages || 0,
                 ad.visualSummary?.totalVideos || 0,
                 ad.visualSummary?.hasCarousel ? 'Yes' : 'No',
-                ad.visualSummary?.hasVideo ? 'Yes' : 'No',
                 ad.visualSummary?.dominantMediaType || '',
                 Array.isArray(ad.ageTargeting) ? ad.ageTargeting.join(', ') : '',
                 Array.isArray(ad.courseSubjects) ? ad.courseSubjects.join(', ') : '',
@@ -954,8 +1094,8 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
         
         // Sort by Active Days (ascending - newest ads first)
         const sortedRows = rows.sort((a, b) => {
-            const aDays = a[9] || 0; // Column J (index 9) = Active Days
-            const bDays = b[9] || 0;
+            const aDays = a[11] || 0; // Column L (index 11) = Active Days
+            const bDays = b[11] || 0;
             return aDays - bDays; // Ascending: 1 day < 2 days < 3 days
         });
 
@@ -1163,10 +1303,10 @@ if (useDirectUrls) {
 } else {
     console.log(`🔍 Using ${searchTerms.length} search terms`);
     for (const searchTerm of searchTerms) {
-        await crawler.addRequests([{
-            url: `https://www.facebook.com/ads/library/`,
-            userData: { searchTerm }
-        }]);
+    await crawler.addRequests([{
+        url: `https://www.facebook.com/ads/library/`,
+        userData: { searchTerm }
+    }]);
     }
 }
 
