@@ -1,0 +1,72 @@
+{
+  "templates": {
+    "square": {
+      "id": "",
+      "name": "Creative Square 1080x1080",
+      "nodeId": "",
+      "format": "1:1",
+      "layers": {
+        "background": "Background",
+        "mainImage": "Main Image",
+        "logo": "Logo",
+        "headline": "Headline",
+        "offer": "Offer",
+        "bodyText": "Body Text",
+        "ctaButton": "CTA Button",
+        "ctaText": "CTA Text"
+      }
+    },
+    "story": {
+      "id": "",
+      "name": "Creative Story 1080x1920",
+      "nodeId": "",
+      "format": "9:16",
+      "layers": {
+        "background": "Background",
+        "mainImage": "Main Image",
+        "logo": "Logo",
+        "headline": "Headline",
+        "offer": "Offer",
+        "bodyText": "Body Text",
+        "ctaButton": "CTA Button",
+        "ctaText": "CTA Text"
+      }
+    },
+    "feed": {
+      "id": "",
+      "name": "Creative Feed 1200x628",
+      "nodeId": "",
+      "format": "16:9",
+      "layers": {
+        "background": "Background",
+        "mainImage": "Main Image",
+        "logo": "Logo",
+        "headline": "Headline",
+        "offer": "Offer",
+        "bodyText": "Body Text",
+        "ctaButton": "CTA Button",
+        "ctaText": "CTA Text"
+      }
+    }
+  },
+  "instructions": {
+    "setup": [
+      "1. Create a Figma file with your creative templates",
+      "2. Name layers exactly as specified in 'layers' object",
+      "3. Copy File ID from Figma URL",
+      "4. Copy Node ID for each template frame",
+      "5. Update this config file with your IDs"
+    ],
+    "layerRequirements": {
+      "Background": "Layer for background image/gradient",
+      "Main Image": "Rectangle with image fill for main subject",
+      "Logo": "Your brand logo (preferably a component)",
+      "Headline": "Text layer for main headline",
+      "Offer": "Text layer for offer/discount",
+      "Body Text": "Text layer for main message",
+      "CTA Button": "Shape for call-to-action button",
+      "CTA Text": "Text on the CTA button"
+    }
+  }
+}
+
