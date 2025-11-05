@@ -55,24 +55,15 @@ async function runTests() {
         console.log(chalk.gray('   Add FIGMA_ACCESS_TOKEN to .env\n'));
     }
 
-    // Test 4: Midjourney API
-    console.log(chalk.yellow('Test 4: Midjourney API'));
-    if (process.env.MIDJOURNEY_API_KEY) {
-        console.log(chalk.green('✅ Midjourney API key configured'));
-        console.log(chalk.gray(`   API URL: ${process.env.MIDJOURNEY_API_URL}\n`));
+    // Test 4: Gemini Flash (Image Generation)
+    console.log(chalk.yellow('Test 4: Gemini Flash (Image Generation)'));
+    if (process.env.OPENROUTER_API_KEY) {
+        console.log(chalk.green('✅ Using OpenRouter API for image generation'));
+        console.log(chalk.gray('   Model: google/gemini-2.5-flash-image-preview'));
+        console.log(chalk.gray('   Characters + Backgrounds via same API\n'));
     } else {
-        console.log(chalk.red('❌ Midjourney API key missing'));
-        console.log(chalk.gray('   Add MIDJOURNEY_API_KEY to .env\n'));
-    }
-
-    // Test 5: Replicate API
-    console.log(chalk.yellow('Test 5: Replicate API (Flux)'));
-    if (process.env.REPLICATE_API_KEY) {
-        console.log(chalk.green('✅ Replicate API key configured'));
-        console.log(chalk.gray('   Model: black-forest-labs/flux-1.1-pro\n'));
-    } else {
-        console.log(chalk.red('❌ Replicate API key missing'));
-        console.log(chalk.gray('   Add REPLICATE_API_KEY to .env\n'));
+        console.log(chalk.red('❌ OpenRouter API key missing'));
+        console.log(chalk.gray('   Add OPENROUTER_API_KEY to .env\n'));
     }
 
     // Test 6: Brand Configuration
@@ -106,10 +97,9 @@ async function runTests() {
     
     const requiredAPIs = {
         'Supabase': !!process.env.SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        'OpenRouter': !!process.env.OPENROUTER_API_KEY,
-        'Figma': !!process.env.FIGMA_ACCESS_TOKEN,
-        'Midjourney': !!process.env.MIDJOURNEY_API_KEY,
-        'Replicate': !!process.env.REPLICATE_API_KEY
+        'OpenRouter (Analysis)': !!process.env.OPENROUTER_API_KEY,
+        'OpenRouter (Images)': !!process.env.OPENROUTER_API_KEY,
+        'Figma': !!process.env.FIGMA_ACCESS_TOKEN
     };
 
     const passedCount = Object.values(requiredAPIs).filter(Boolean).length;
