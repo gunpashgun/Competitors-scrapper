@@ -55,13 +55,39 @@ export class CreativeAnalyzer {
 
             const content = response.data.choices[0].message.content;
             
+            console.log('📄 Raw response preview:', content.substring(0, 500));
+            
             // Parse JSON from the response
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-                throw new Error('Failed to parse JSON from response');
+            // Try to extract JSON, handling markdown code blocks
+            let jsonText = content;
+            
+            // Remove markdown code blocks if present
+            if (content.includes('```json')) {
+                const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    jsonText = jsonMatch[1];
+                }
+            } else if (content.includes('```')) {
+                const jsonMatch = content.match(/```\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    jsonText = jsonMatch[1];
+                }
+            } else {
+                // Try to find JSON object
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    jsonText = jsonMatch[0];
+                }
             }
 
-            const analysis = JSON.parse(jsonMatch[0]);
+            let analysis;
+            try {
+                analysis = JSON.parse(jsonText);
+            } catch (parseError) {
+                console.error('❌ JSON Parse Error:', parseError.message);
+                console.error('📄 Attempted to parse:', jsonText.substring(0, 200));
+                throw new Error('Failed to parse JSON from Claude response: ' + parseError.message);
+            }
             
             console.log('✅ Analysis completed');
             console.log(`   - Headline: ${analysis.headline}`);
@@ -75,8 +101,13 @@ export class CreativeAnalyzer {
         } catch (error) {
             console.error('❌ Error analyzing creative:', error.message);
             if (error.response) {
-                console.error('Response:', error.response.data);
+                console.error('Response status:', error.response.status);
+                console.error('Response data:', JSON.stringify(error.response.data, null, 2));
             }
+            if (error.request && !error.response) {
+                console.error('No response received from API');
+            }
+            console.error('Full error:', error);
             throw error;
         }
     }

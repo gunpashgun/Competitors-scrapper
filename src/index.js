@@ -13,10 +13,21 @@ export class CreativeGenerator {
         this.characterGen = new CharacterGenerator(config.midjourneyApiKey);
         this.backgroundGen = new BackgroundGenerator(config.replicateApiKey);
         this.figmaComposer = new FigmaComposer(config.figmaToken, config.figmaFileId);
+        // Parse brand colors safely
+        let brandColors = [];
+        try {
+            if (process.env.BRAND_COLORS) {
+                brandColors = JSON.parse(process.env.BRAND_COLORS);
+            }
+        } catch (e) {
+            console.warn('⚠️ Could not parse BRAND_COLORS, using defaults');
+            brandColors = ['#FF6B6B', '#4ECDC4'];
+        }
+
         this.brandConfig = config.brand || {
             name: process.env.BRAND_NAME || 'Your Brand',
             logoUrl: process.env.BRAND_LOGO_URL,
-            colors: JSON.parse(process.env.BRAND_COLORS || '[]')
+            colors: brandColors
         };
     }
 
