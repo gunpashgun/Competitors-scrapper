@@ -112,8 +112,8 @@ for (let i = 0; i < sources.length; i++) {
         
         results.push({
             itemId,
+            adId: useAdIds ? source : null,
             status: 'error',
-            originalUrl: imageUrl,
             error: error.message
         });
     }
