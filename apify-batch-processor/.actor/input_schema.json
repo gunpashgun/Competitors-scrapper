@@ -1,19 +1,12 @@
 {
   "title": "Creative Batch Processor Input",
   "type": "object",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "properties": {
     "creatives": {
-      "title": "Creatives (DEPRECATED - use imageUrls)",
+      "title": "Creatives to Process",
       "type": "array",
-      "description": "DEPRECATED: This field is no longer used",
-      "editor": "json",
-      "prefill": []
-    },
-    "imageUrls": {
-      "title": "Image URLs",
-      "type": "array",
-      "description": "List of competitor creative image URLs from Google Sheets",
+      "description": "List of image URLs to process (just paste URLs, one per line)",
       "editor": "stringList",
       "example": [
         "https://scontent.xx.fbcdn.net/v/t39.35426-6/...",
@@ -44,6 +37,6 @@
       "isSecret": true
     }
   },
-  "required": []
+  "required": ["creatives"]
 }
 

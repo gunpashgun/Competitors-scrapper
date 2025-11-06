@@ -7,18 +7,17 @@ await Actor.init();
 
 const input = await Actor.getInput();
 const {
-    imageUrls = [],
-    creatives = [], // Legacy support
+    creatives = [],
     yourBrand = 'YourBrand',
     openrouterApiKey,
     openaiApiKey
 } = input;
 
-// Support both new (imageUrls) and legacy (creatives) formats
-const urls = imageUrls.length > 0 ? imageUrls : creatives.map(c => c.imageUrl || c);
+// creatives is now just an array of URLs
+const urls = creatives;
 
 if (urls.length === 0) {
-    console.error('❌ Error: Please provide imageUrls array');
+    console.error('❌ Error: Please provide creatives array with image URLs');
     await Actor.fail('No image URLs provided');
 }
 
