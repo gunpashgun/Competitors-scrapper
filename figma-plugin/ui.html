@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Creative Generator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 16px;
+      background: #f5f5f5;
+    }
+    
+    .container {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #333;
+    }
+    
+    .subtitle {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #333;
+    }
+    
+    input, textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #18A0FB;
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    
+    .color-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    
+    .color-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    input[type="color"] {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    
+    .color-label {
+      font-size: 11px;
+      color: #666;
+    }
+    
+    .preset-section {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .preset-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    
+    .preset-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    
+    .preset-btn {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+    
+    .preset-btn:hover {
+      background: #f0f0f0;
+      border-color: #18A0FB;
+    }
+    
+    .buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #18A0FB;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #0d8ce8;
+    }
+    
+    .btn-secondary {
+      background: white;
+      color: #333;
+      border: 1px solid #ddd;
+    }
+    
+    .btn-secondary:hover {
+      background: #f5f5f5;
+    }
+    
+    .emoji {
+      margin-right: 4px;
+    }
+    
+    .info-box {
+      background: #e8f4fd;
+      border: 1px solid #b3d9f7;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11px;
+      color: #0d47a1;
+      margin-bottom: 16px;
+    }
+
+    .file-status {
+      font-size: 11px;
+      color: #0d47a1;
+      margin-top: 4px;
+    }
+
+    .helper-text {
+      font-size: 10px;
+      color: #777;
+      margin-top: 4px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Creative Generator</h1>
+    <p class="subtitle">Facebook Ads - Portrait 1080x1350px</p>
+    
+    <div class="info-box">
+      <strong>💡 Tip:</strong> All objects will be created in separate layers for easy editing!
+    </div>
+    
+    <!-- Inpainting integration -->
+    <div class="form-group">
+      <label for="competitorUrl">🔗 Ссылка на креатив конкурента</label>
+      <input type="text" id="competitorUrl" placeholder="https://.../creative.jpg">
+    </div>
+
+    <div class="form-group">
+      <label>⚙️ Локальный API для очистки (опционально)</label>
+      <div class="color-inputs" style="grid-template-columns: auto 1fr; gap: 8px; align-items:center;">
+        <input type="checkbox" id="useLocalApi" checked>
+        <input type="text" id="apiBase" value="http://localhost:3987" placeholder="http://localhost:3987">
+      </div>
+      <span class="helper-text">Если включено, плагин отправит ссылку на локальный сервис и получит чистый фон + разметку.</span>
+    </div>
+
+    <div class="form-group">
+      <label for="cleanImageFile">🖼️ Cleaned Background Image (PNG)</label>
+      <input type="file" id="cleanImageFile" accept="image/png">
+      <div class="file-status" id="cleanImageStatus">No file selected</div>
+    </div>
+    
+    <div class="form-group">
+      <label for="layoutFile">📄 Inpainting Layout JSON</label>
+      <input type="file" id="layoutFile" accept="application/json">
+      <div class="file-status" id="layoutStatus">No file selected</div>
+      <span class="helper-text">Load the <code>inpainting-data.json</code> produced by the inpainting pipeline.</span>
+    </div>
+    
+    <!-- Presets -->
+    <div class="preset-section">
+      <div class="preset-title">⚡ Quick Presets</div>
+      <div class="preset-buttons">
+        <button class="preset-btn" onclick="loadPreset('kodland')">🎮 Kodland Style</button>
+        <button class="preset-btn" onclick="loadPreset('digikidz')">🤖 DigiKidz Style</button>
+        <button class="preset-btn" onclick="loadPreset('custom1')">🎨 Modern Blue</button>
+        <button class="preset-btn" onclick="loadPreset('custom2')">🔥 Energetic Red</button>
+      </div>
+    </div>
+    
+    <!-- Form -->
+    <div class="form-group">
+      <label for="headline">📰 Headline (Indonesian)</label>
+      <textarea id="headline" placeholder="Belajar coding lewat Minecraft & Roblox! 🎮">Belajar coding lewat
+Minecraft & Roblox! 🎮</textarea>
+    </div>
+    
+    <div class="form-group">
+      <label for="bodyText">📝 Body Text</label>
+      <textarea id="bodyText" placeholder="Kami akan mengajarkan mereka pemrograman...">Kami akan mengajarkan mereka pemrograman
+di dalam permainan favorit mereka!</textarea>
+    </div>
+    
+    <div class="form-group">
+      <label for="cta">🎯 Call to Action</label>
+      <input type="text" id="cta" value="COBA GRATIS! 🚀" placeholder="COBA GRATIS! 🚀">
+    </div>
+    
+    <div class="form-group">
+      <label for="ageRange">👶 Age Range</label>
+      <input type="text" id="ageRange" value="Usia: 8-17 tahun" placeholder="Usia: 8-17 tahun">
+    </div>
+    
+    <div class="form-group">
+      <label>🎨 Colors</label>
+      <div class="color-inputs">
+        <div class="color-input">
+          <input type="color" id="primaryColor" value="#2E0B4F">
+          <div class="color-label">Primary<br>(Background)</div>
+        </div>
+        <div class="color-input">
+          <input type="color" id="secondaryColor" value="#FFEB3B">
+          <div class="color-label">Secondary<br>(Accent)</div>
+        </div>
+        <div class="color-input">
+          <input type="color" id="textColor" value="#FFFFFF">
+          <div class="color-label">Text<br>(Body)</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label for="imageUrl">🖼️ Character Image URL (optional)</label>
+      <input type="text" id="imageUrl" placeholder="https://example.com/image.png">
+    </div>
+    
+    <!-- Buttons -->
+    <div class="buttons">
+      <button class="btn-secondary" onclick="cancel()">Cancel</button>
+      <button class="btn-primary" onclick="createCreative()">
+        <span class="emoji">✨</span>Create Creative
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let cleanImageBytes = null;
+    let cleanImageName = '';
+    let layoutData = null;
+    let layoutSourceName = '';
+    
+    // Presets data
+    const presets = {
+      kodland: {
+        headline: 'Belajar coding lewat\nMinecraft & Roblox! 🎮',
+        bodyText: 'Kami akan mengajarkan mereka pemrograman\ndi dalam permainan favorit mereka!',
+        cta: 'COBA GRATIS! 🚀',
+        ageRange: 'Usia: 8-17 tahun',
+        primaryColor: '#2E0B4F',
+        secondaryColor: '#FFEB3B',
+        textColor: '#FFFFFF'
+      },
+      digikidz: {
+        headline: 'Anak suka main game?\nAjar mereka coding! 💻',
+        bodyText: 'Belajar coding sambil bermain\nMinecraft dan Roblox!',
+        cta: 'DAFTAR SEKARANG! 🎯',
+        ageRange: 'Usia: 8-17 tahun',
+        primaryColor: '#1A237E',
+        secondaryColor: '#00BCD4',
+        textColor: '#FFFFFF'
+      },
+      custom1: {
+        headline: 'Ubah waktu main game\njadi belajar coding! 🚀',
+        bodyText: 'Kursus online interaktif\nuntuk anak usia 8-17 tahun!',
+        cta: 'MULAI BELAJAR! ✨',
+        ageRange: 'Usia: 8-17 tahun',
+        primaryColor: '#0D47A1',
+        secondaryColor: '#64B5F6',
+        textColor: '#FFFFFF'
+      },
+      custom2: {
+        headline: 'Coding itu seru!\nBelajar lewat game! 🎮',
+        bodyText: 'Program online terbaik\nuntuk anak Indonesia!',
+        cta: 'COBA SEKARANG! 🔥',
+        ageRange: 'Usia: 8-17 tahun',
+        primaryColor: '#B71C1C',
+        secondaryColor: '#FFD54F',
+        textColor: '#FFFFFF'
+      }
+    };
+    
+    // File inputs
+    const cleanImageInput = document.getElementById('cleanImageFile');
+    const cleanImageStatus = document.getElementById('cleanImageStatus');
+    const layoutInput = document.getElementById('layoutFile');
+    const layoutStatus = document.getElementById('layoutStatus');
+
+    if (cleanImageInput) {
+      cleanImageInput.addEventListener('change', async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+          cleanImageBytes = null;
+          cleanImageName = '';
+          cleanImageStatus.textContent = 'No file selected';
+          return;
+        }
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          cleanImageBytes = Array.from(new Uint8Array(arrayBuffer));
+          cleanImageName = file.name;
+          const sizeKb = Math.round(file.size / 1024);
+          cleanImageStatus.textContent = `Loaded ${file.name} (${sizeKb} KB)`;
+        } catch (error) {
+          console.error('Failed to read image file', error);
+          cleanImageStatus.textContent = '⚠️ Failed to read file';
+        }
+      });
+    }
+
+    if (layoutInput) {
+      layoutInput.addEventListener('change', async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+          layoutData = null;
+          layoutSourceName = '';
+          layoutStatus.textContent = 'No file selected';
+          return;
+        }
+        try {
+          const text = await file.text();
+          layoutData = JSON.parse(text);
+          layoutSourceName = file.name;
+          layoutStatus.textContent = `Loaded ${file.name}`;
+          applyLayoutDefaults(layoutData);
+        } catch (error) {
+          console.error('Failed to read layout JSON', error);
+          layoutStatus.textContent = '⚠️ Invalid JSON file';
+          layoutData = null;
+        }
+      });
+    }
+
+    function applyLayoutDefaults(layout) {
+      if (!layout || !Array.isArray(layout.textBlocks)) return;
+      const byType = (type) => layout.textBlocks.find(block => block.type === type);
+      const headlineBlock = byType('headline');
+      if (headlineBlock && headlineBlock.newText) {
+        document.getElementById('headline').value = headlineBlock.newText;
+      }
+      const subheadlineBlock = byType('subheadline');
+      if (subheadlineBlock && subheadlineBlock.newText) {
+        document.getElementById('bodyText').value = subheadlineBlock.newText;
+      }
+      const ctaBlock = byType('ctaButton');
+      if (ctaBlock && ctaBlock.newText) {
+        document.getElementById('cta').value = ctaBlock.newText;
+      }
+    }
+
+    // Load preset
+    function loadPreset(presetName) {
+      const preset = presets[presetName];
+      if (!preset) return;
+      
+      document.getElementById('headline').value = preset.headline;
+      document.getElementById('bodyText').value = preset.bodyText;
+      document.getElementById('cta').value = preset.cta;
+      document.getElementById('ageRange').value = preset.ageRange;
+      document.getElementById('primaryColor').value = preset.primaryColor;
+      document.getElementById('secondaryColor').value = preset.secondaryColor;
+      document.getElementById('textColor').value = preset.textColor;
+    }
+    
+    // Create creative
+    function createCreative() {
+      const data = {
+        headline: document.getElementById('headline').value,
+        bodyText: document.getElementById('bodyText').value,
+        cta: document.getElementById('cta').value,
+        ageRange: document.getElementById('ageRange').value,
+        primaryColor: document.getElementById('primaryColor').value,
+        secondaryColor: document.getElementById('secondaryColor').value,
+        textColor: document.getElementById('textColor').value,
+        imageUrl: document.getElementById('imageUrl').value,
+        competitorUrl: document.getElementById('competitorUrl').value,
+        useLocalApi: document.getElementById('useLocalApi').checked,
+        apiBase: document.getElementById('apiBase').value,
+        cleanImageBytes,
+        cleanImageName,
+        layout: layoutData,
+        layoutSourceName,
+        textOverrides: {
+          headline: document.getElementById('headline').value,
+          subheadline: document.getElementById('bodyText').value,
+          cta: document.getElementById('cta').value,
+          ageRange: document.getElementById('ageRange').value
+        }
+      };
+      
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: 'create-creative', 
+          data: data 
+        } 
+      }, '*');
+    }
+    
+    // Cancel
+    function cancel() {
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: 'cancel' 
+        } 
+      }, '*');
+    }
+    
+    // Listen for messages from plugin
+    onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (msg.type === 'creation-complete') {
+        // Could show success message or close plugin
+      }
+    };
+  </script>
+</body>
+</html>
+

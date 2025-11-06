@@ -1,0 +1,10 @@
+{
+  "name": "creative-generator-fb-ads",
+  "version": "1.0.0",
+  "description": "Figma plugin for Facebook Ads creative generation",
+  "main": "code.js",
+  "scripts": {
+    "build": "echo 'No build needed - using plain JavaScript'"
+  }
+}
+

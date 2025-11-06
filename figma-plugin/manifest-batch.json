@@ -1,0 +1,12 @@
+{
+  "name": "Batch Creative Generator (Apify)",
+  "id": "batch-creative-generator-apify",
+  "api": "1.0.0",
+  "main": "code-batch.js",
+  "ui": "ui-batch.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  }
+}
+
