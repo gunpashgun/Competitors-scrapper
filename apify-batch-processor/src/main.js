@@ -158,9 +158,16 @@ For EACH element provide:
 5. COLORS (hex codes)
 6. SHAPE (rectangle/rounded/circle)
 
+ALSO provide detailed BACKGROUND DESCRIPTION:
+- Main character(s) description (pose, clothing, style, positioning)
+- Decorative elements (what objects frame or decorate the scene)
+- Color palette and lighting
+- Overall style and mood
+
 Return JSON with:
 {
   "imageDimensions": { "width": 0, "height": 0 },
+  "backgroundDescription": "Detailed description of the background, characters, decorative elements, lighting, and style",
   "logo": { "present": true, "text": "", "x": 0, "y": 0, "width": 0, "height": 0, "fontSize": 0, "fontWeight": "", "color": "" },
   "textElements": [
     { "type": "headline/subheadline/body/caption", "text": "", "x": 0, "y": 0, "width": 0, "height": 0, "fontSize": 0, "fontWeight": "", "textAlign": "", "color": "" }
@@ -442,6 +449,7 @@ function generateLayoutData(analysis, yourBrand, imageUrl, imageMeta) {
             width: imageMeta.width,
             height: imageMeta.height
         },
+        backgroundDescription: analysis.backgroundDescription || '',
         textBlocks,
         method: 'GPT-4o Vision + OpenAI gpt-image-1',
         timestamp: new Date().toISOString()
