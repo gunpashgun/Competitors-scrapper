@@ -1,7 +1,7 @@
 {
   "title": "Creative Batch Processor Input",
   "type": "object",
-  "schemaVersion": 3,
+  "schemaVersion": 1,
   "properties": {
     "creatives": {
       "title": "Creatives to Process",
