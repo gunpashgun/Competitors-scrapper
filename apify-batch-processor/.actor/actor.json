@@ -46,18 +46,8 @@
     }
   },
   "environmentVariables": {
-    "OPENROUTER_API_KEY": {
-      "title": "OpenRouter API Key",
-      "type": "string",
-      "description": "API key for OpenRouter (GPT-4o Vision)",
-      "isSecret": true
-    },
-    "OPENAI_API_KEY": {
-      "title": "OpenAI API Key",
-      "type": "string",
-      "description": "API key for OpenAI (gpt-image-1)",
-      "isSecret": true
-    }
+    "OPENROUTER_API_KEY": "API key for OpenRouter (GPT-4o Vision)",
+    "OPENAI_API_KEY": "API key for OpenAI (gpt-image-1)"
   }
 }
 
