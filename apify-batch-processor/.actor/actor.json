@@ -3,7 +3,7 @@
   "name": "creative-batch-processor",
   "title": "Creative Batch Processor",
   "description": "Process multiple competitor creatives: analyze with GPT-4o Vision, remove text with OpenAI gpt-image-1, generate Figma layouts",
-  "version": "1.0",
+  "version": "2.0",
   "meta": {
     "templateId": "node-puppeteer"
   },
