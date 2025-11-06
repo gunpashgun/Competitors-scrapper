@@ -8,18 +8,22 @@ await Actor.init();
 const input = await Actor.getInput();
 const {
     imageUrls = [],
+    creatives = [], // Legacy support
     yourBrand = 'YourBrand',
     openrouterApiKey,
     openaiApiKey
 } = input;
 
-if (imageUrls.length === 0) {
+// Support both new (imageUrls) and legacy (creatives) formats
+const urls = imageUrls.length > 0 ? imageUrls : creatives.map(c => c.imageUrl || c);
+
+if (urls.length === 0) {
     console.error('❌ Error: Please provide imageUrls array');
     await Actor.fail('No image URLs provided');
 }
 
 console.log('🎨 Creative Batch Processor Started');
-console.log(`📊 Processing ${imageUrls.length} images`);
+console.log(`📊 Processing ${urls.length} images`);
 console.log(`🏢 Your brand: ${yourBrand}\n`);
 
 const OPENROUTER_KEY = openrouterApiKey || process.env.OPENROUTER_API_KEY;
@@ -27,12 +31,12 @@ const OPENAI_KEY = openaiApiKey || process.env.OPENAI_API_KEY;
 
 const results = [];
 
-for (let i = 0; i < imageUrls.length; i++) {
-    const imageUrl = imageUrls[i];
+for (let i = 0; i < urls.length; i++) {
+    const imageUrl = urls[i];
     const itemId = `creative-${i + 1}`;
     
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`🔄 Processing ${i + 1}/${imageUrls.length}`);
+    console.log(`🔄 Processing ${i + 1}/${urls.length}`);
     console.log(`📷 Image: ${imageUrl.substring(0, 60)}...`);
     
     try {

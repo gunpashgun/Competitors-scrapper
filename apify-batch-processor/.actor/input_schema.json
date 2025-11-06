@@ -3,6 +3,13 @@
   "type": "object",
   "schemaVersion": 2,
   "properties": {
+    "creatives": {
+      "title": "Creatives (DEPRECATED - use imageUrls)",
+      "type": "array",
+      "description": "DEPRECATED: This field is no longer used",
+      "editor": "json",
+      "prefill": []
+    },
     "imageUrls": {
       "title": "Image URLs",
       "type": "array",
@@ -37,6 +44,6 @@
       "isSecret": true
     }
   },
-  "required": ["imageUrls"]
+  "required": []
 }
 
