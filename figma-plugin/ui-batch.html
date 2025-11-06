@@ -205,6 +205,38 @@
       🚀 Generate Creatives
     </button>
     
+    <!-- Surprise Me Section -->
+    <div class="form-group" style="margin-top: 24px; border-top: 2px solid #e0e0e0; padding-top: 16px;">
+      <label>✨ Удиви меня! (Image Variation)</label>
+      <div class="helper-text" style="margin-bottom: 12px;">
+        Выберите креатив в Figma и создайте его вариацию с новым фоном
+      </div>
+      
+      <div style="margin-bottom: 12px;">
+        <label for="characterDesc" style="font-size: 11px; margin-bottom: 4px;">👤 Ключевой персонаж</label>
+        <input type="text" id="characterDesc" placeholder="Например: Молодая девушка с ноутбуком">
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+          <input type="checkbox" id="noCharacter">
+          <label for="noCharacter" style="font-size: 11px; margin: 0; font-weight: normal;">Без персонажа</label>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 12px;">
+        <label for="backgroundDesc" style="font-size: 11px; margin-bottom: 4px;">🌄 Фон</label>
+        <input type="text" id="backgroundDesc" placeholder="Например: Современный офис с большими окнами">
+      </div>
+      
+      <div style="margin-bottom: 12px;">
+        <label for="openaiKey" style="font-size: 11px; margin-bottom: 4px;">🔑 OpenAI API Key</label>
+        <input type="password" id="openaiKey" placeholder="sk-...">
+        <div class="helper-text">Для генерации изображений через DALL-E 3</div>
+      </div>
+      
+      <button class="btn btn-primary" id="surpriseMeBtn">
+        ✨ Удиви меня!
+      </button>
+    </div>
+    
     <div id="status" class="status"></div>
   </div>
 
@@ -214,6 +246,13 @@
     const status = document.getElementById('status');
     const gridColumns = document.getElementById('gridColumns');
     const gridSpacing = document.getElementById('gridSpacing');
+    
+    // Surprise Me elements
+    const surpriseMeBtn = document.getElementById('surpriseMeBtn');
+    const characterDesc = document.getElementById('characterDesc');
+    const noCharacter = document.getElementById('noCharacter');
+    const backgroundDesc = document.getElementById('backgroundDesc');
+    const openaiKey = document.getElementById('openaiKey');
     
     function showStatus(message, type) {
       status.textContent = message;
@@ -270,6 +309,39 @@
       }, '*');
     });
     
+    // Surprise Me button handler
+    surpriseMeBtn.addEventListener('click', () => {
+      hideStatus();
+      
+      const apiKey = openaiKey.value.trim();
+      if (!apiKey) {
+        showStatus('❌ Please enter OpenAI API Key', 'error');
+        return;
+      }
+      
+      const character = noCharacter.checked ? '' : characterDesc.value.trim();
+      const background = backgroundDesc.value.trim();
+      
+      if (!character && !background) {
+        showStatus('❌ Please provide character or background description', 'error');
+        return;
+      }
+      
+      showStatus('⏳ Generating variation...', 'loading');
+      surpriseMeBtn.disabled = true;
+      
+      // Send to plugin
+      parent.postMessage({
+        pluginMessage: {
+          type: 'surprise-me',
+          character: character,
+          background: background,
+          noCharacter: noCharacter.checked,
+          openaiKey: apiKey
+        }
+      }, '*');
+    });
+    
     // Listen for completion from plugin
     window.addEventListener('message', (event) => {
       const msg = event.data.pluginMessage;
@@ -279,6 +351,12 @@
       } else if (msg && msg.type === 'batch-error') {
         showStatus('❌ Error: ' + msg.error, 'error');
         generateBtn.disabled = false;
+      } else if (msg && msg.type === 'surprise-complete') {
+        showStatus('✨ Variation created successfully!', 'success');
+        surpriseMeBtn.disabled = false;
+      } else if (msg && msg.type === 'surprise-error') {
+        showStatus('❌ Error: ' + msg.error, 'error');
+        surpriseMeBtn.disabled = false;
       }
     });
   </script>

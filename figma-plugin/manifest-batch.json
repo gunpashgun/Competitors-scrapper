@@ -6,7 +6,9 @@
   "ui": "ui-batch.html",
   "editorType": ["figma"],
   "networkAccess": {
-    "allowedDomains": ["none"]
+    "allowedDomains": [
+      "https://api.openai.com"
+    ]
   }
 }
 

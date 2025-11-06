@@ -273,8 +273,154 @@ async function createCreativeFrame(data, x, y) {
   return frame;
 }
 
+/**
+ * Generate image variation using DALL-E 3
+ */
+async function generateImageVariation(options) {
+  const { character, background, noCharacter, openaiKey, layoutData, originalDimensions } = options;
+  
+  // Build prompt
+  let prompt = 'Create a professional advertising background image';
+  
+  if (!noCharacter && character) {
+    prompt += ` featuring ${character}`;
+  } else {
+    prompt += ' without any people';
+  }
+  
+  if (background) {
+    prompt += `, set in ${background}`;
+  }
+  
+  // Add style and quality requirements
+  prompt += '. Style: modern, professional, high-quality advertising photography. ';
+  prompt += 'Composition: leave space in the center and bottom for text overlays. ';
+  prompt += 'Lighting: bright, appealing, commercial look. ';
+  prompt += 'NO TEXT, NO LOGOS, NO WRITING in the image.';
+  
+  console.log('🎨 Generating image with prompt:', prompt);
+  
+  // Determine size (DALL-E 3 supports: 1024x1024, 1792x1024, 1024x1792)
+  let size = '1024x1792'; // Portrait by default
+  if (originalDimensions) {
+    const aspectRatio = originalDimensions.width / originalDimensions.height;
+    if (aspectRatio > 1.2) {
+      size = '1792x1024'; // Landscape
+    } else if (aspectRatio > 0.9 && aspectRatio < 1.1) {
+      size = '1024x1024'; // Square
+    }
+  }
+  
+  // Call DALL-E 3
+  try {
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiKey}`
+      },
+      body: JSON.stringify({
+        model: 'dall-e-3',
+        prompt: prompt,
+        n: 1,
+        size: size,
+        quality: 'hd',
+        response_format: 'b64_json'
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'DALL-E 3 API error');
+    }
+    
+    const data = await response.json();
+    const base64Image = data.data[0].b64_json;
+    
+    return base64Image;
+  } catch (error) {
+    throw new Error('Image generation failed: ' + error.message);
+  }
+}
+
 figma.ui.onmessage = async (msg) => {
-  if (msg.type === 'generate-batch') {
+  if (msg.type === 'surprise-me') {
+    try {
+      // Get selected frame
+      const selection = figma.currentPage.selection;
+      if (selection.length === 0) {
+        figma.ui.postMessage({
+          type: 'surprise-error',
+          error: 'Please select a creative frame first'
+        });
+        return;
+      }
+      
+      const selectedFrame = selection[0];
+      if (selectedFrame.type !== 'FRAME') {
+        figma.ui.postMessage({
+          type: 'surprise-error',
+          error: 'Please select a FRAME (creative)'
+        });
+        return;
+      }
+      
+      console.log('✨ Surprise Me: Generating variation...');
+      
+      // Extract layout data from selected frame
+      const layoutData = {
+        originalDimensions: {
+          width: selectedFrame.width,
+          height: selectedFrame.height
+        }
+      };
+      
+      // Generate new background image
+      const newImageBase64 = await generateImageVariation({
+        character: msg.character,
+        background: msg.background,
+        noCharacter: msg.noCharacter,
+        openaiKey: msg.openaiKey,
+        layoutData: layoutData,
+        originalDimensions: layoutData.originalDimensions
+      });
+      
+      console.log('✅ Image generated successfully');
+      
+      // Create new frame next to the original
+      const newFrame = selectedFrame.clone();
+      newFrame.x = selectedFrame.x + selectedFrame.width + 100; // Place to the right with 100px spacing
+      newFrame.name = selectedFrame.name + ' (Variation)';
+      
+      // Replace background image
+      const bgNode = newFrame.findOne(node => node.name === 'Background');
+      if (bgNode && bgNode.type === 'RECTANGLE') {
+        const imageBytes = base64ToUint8Array(newImageBase64);
+        const imageHash = figma.createImage(imageBytes).hash;
+        
+        bgNode.fills = [{
+          type: 'IMAGE',
+          imageHash: imageHash,
+          scaleMode: 'FILL'
+        }];
+      }
+      
+      // Select the new frame
+      figma.currentPage.selection = [newFrame];
+      figma.viewport.scrollAndZoomIntoView([newFrame]);
+      
+      figma.ui.postMessage({
+        type: 'surprise-complete'
+      });
+      
+    } catch (error) {
+      console.error('❌ Surprise Me error:', error);
+      figma.ui.postMessage({
+        type: 'surprise-error',
+        error: error.message
+      });
+    }
+  } else if (msg.type === 'generate-batch') {
     try {
       await loadFonts();
       
