@@ -85,7 +85,9 @@ for (let i = 0; i < urls.length; i++) {
             processedAt: new Date().toISOString()
         };
         
+        console.log(`💾 Saving to dataset: itemId=${itemId}, imageSize=${Math.round(cleanImageBuffer.length/1024)}KB, layoutElements=${layoutData.textBlocks.length}`);
         await Actor.pushData(datasetItem);
+        console.log(`✅ Saved to dataset`);
         
         results.push({
             itemId,
