@@ -7,14 +7,25 @@ await Actor.init();
 
 const input = await Actor.getInput();
 const {
+    adIds = [],
     imageUrls = [],
     yourBrand = 'YourBrand',
     openrouterApiKey,
     openaiApiKey
 } = input;
 
+// Determine input source
+const useAdIds = adIds.length > 0;
+const sources = useAdIds ? adIds : imageUrls;
+
+if (sources.length === 0) {
+    console.error('❌ Error: Please provide either adIds or imageUrls');
+    await Actor.fail('No input provided');
+}
+
 console.log('🎨 Creative Batch Processor Started');
-console.log(`📊 Processing ${imageUrls.length} creatives`);
+console.log(`📊 Input type: ${useAdIds ? 'Ad IDs' : 'Image URLs'}`);
+console.log(`📊 Processing ${sources.length} creatives`);
 console.log(`🏢 Your brand: ${yourBrand}\n`);
 
 const OPENROUTER_KEY = openrouterApiKey || process.env.OPENROUTER_API_KEY;
@@ -22,15 +33,25 @@ const OPENAI_KEY = openaiApiKey || process.env.OPENAI_API_KEY;
 
 const results = [];
 
-for (let i = 0; i < imageUrls.length; i++) {
-    const imageUrl = imageUrls[i];
-    const itemId = `creative-${i + 1}`;
+for (let i = 0; i < sources.length; i++) {
+    const source = sources[i];
+    const itemId = useAdIds ? `ad-${source}` : `creative-${i + 1}`;
     
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`🔄 Processing ${i + 1}/${imageUrls.length}`);
-    console.log(`📷 URL: ${imageUrl.substring(0, 60)}...`);
+    console.log(`🔄 Processing ${i + 1}/${sources.length}`);
+    console.log(`📋 ${useAdIds ? 'Ad ID' : 'URL'}: ${source.toString().substring(0, 60)}...`);
     
     try {
+        // Step 0: Get image URL from Ad ID if needed
+        let imageUrl;
+        if (useAdIds) {
+            console.log('\n🔍 Step 0: Fetching image URL from Meta Ad Library...');
+            imageUrl = await fetchImageFromAdId(source);
+            console.log(`✅ Image URL found: ${imageUrl.substring(0, 60)}...`);
+        } else {
+            imageUrl = source;
+        }
+        
         // Step 1: Analyze with GPT-4o Vision
         console.log('\n📊 Step 1: Analyzing with GPT-4o Vision...');
         const analysis = await analyzeCreative(imageUrl, OPENROUTER_KEY);
@@ -169,6 +190,60 @@ Return JSON with:
     
     const jsonStr = jsonMatch[1] || jsonMatch[0];
     return JSON.parse(jsonStr);
+}
+
+/**
+ * Fetch image URL from Facebook Ad ID
+ */
+async function fetchImageFromAdId(adId) {
+    try {
+        // Meta Ad Library API endpoint
+        const adLibraryUrl = `https://www.facebook.com/ads/library/?id=${adId}`;
+        
+        console.log(`   Accessing: ${adLibraryUrl}`);
+        
+        // Fetch the ad library page
+        const response = await axios.get(adLibraryUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5'
+            }
+        });
+        
+        const html = response.data;
+        
+        // Extract image URL from HTML
+        // Look for image URLs in common Facebook CDN patterns
+        const patterns = [
+            /https:\/\/scontent[^"'\s]+\.(?:jpg|png|jpeg)/gi,
+            /https:\/\/.*fbcdn\.net\/[^"'\s]+\.(?:jpg|png|jpeg)/gi,
+            /"url":"(https:\/\/scontent[^"]+\.(?:jpg|png|jpeg))"/gi
+        ];
+        
+        let imageUrl = null;
+        
+        for (const pattern of patterns) {
+            const matches = html.match(pattern);
+            if (matches && matches.length > 0) {
+                // Get the largest image (usually has higher resolution)
+                imageUrl = matches.sort((a, b) => b.length - a.length)[0];
+                // Clean up if it's from JSON
+                imageUrl = imageUrl.replace(/^"url":"/, '').replace(/"$/, '');
+                break;
+            }
+        }
+        
+        if (!imageUrl) {
+            throw new Error(`No image found for Ad ID: ${adId}`);
+        }
+        
+        return imageUrl;
+        
+    } catch (error) {
+        console.error(`   ❌ Failed to fetch image for Ad ID ${adId}:`, error.message);
+        throw new Error(`Failed to fetch image from Ad Library: ${error.message}`);
+    }
 }
 
 /**

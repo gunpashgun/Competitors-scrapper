@@ -3,13 +3,23 @@
   "type": "object",
   "schemaVersion": 1,
   "properties": {
-    "imageUrls": {
-      "title": "Image URLs",
+    "adIds": {
+      "title": "Facebook Ad IDs",
       "type": "array",
-      "description": "List of competitor creative image URLs to process",
+      "description": "List of Facebook Ad Library IDs to process (from Scraper output)",
       "editor": "stringList",
       "example": [
-        "https://scontent.xx.fbcdn.net/v/...",
+        "1234567890123456",
+        "6543210987654321"
+      ],
+      "prefill": []
+    },
+    "imageUrls": {
+      "title": "Image URLs (Alternative)",
+      "type": "array",
+      "description": "Alternative: Direct image URLs if you don't have Ad IDs",
+      "editor": "stringList",
+      "example": [
         "https://scontent.xx.fbcdn.net/v/..."
       ],
       "prefill": []
@@ -37,6 +47,6 @@
       "isSecret": true
     }
   },
-  "required": ["imageUrls"]
+  "required": []
 }
 

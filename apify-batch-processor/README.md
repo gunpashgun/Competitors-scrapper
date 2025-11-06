@@ -11,6 +11,20 @@ Automatically process multiple competitor creatives:
 
 ## Input
 
+### Option 1: Using Ad IDs (Recommended)
+
+```json
+{
+  "adIds": [
+    "1234567890123456",
+    "6543210987654321"
+  ],
+  "yourBrand": "Algonova"
+}
+```
+
+### Option 2: Using Image URLs
+
 ```json
 {
   "imageUrls": [
