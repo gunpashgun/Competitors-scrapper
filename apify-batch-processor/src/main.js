@@ -7,19 +7,19 @@ await Actor.init();
 
 const input = await Actor.getInput();
 const {
-    creatives = [],
+    imageUrls = [],
     yourBrand = 'YourBrand',
     openrouterApiKey,
     openaiApiKey
 } = input;
 
-if (creatives.length === 0) {
-    console.error('❌ Error: Please provide creatives array with adId and imageUrl');
-    await Actor.fail('No creatives provided');
+if (imageUrls.length === 0) {
+    console.error('❌ Error: Please provide imageUrls array');
+    await Actor.fail('No image URLs provided');
 }
 
 console.log('🎨 Creative Batch Processor Started');
-console.log(`📊 Processing ${creatives.length} creatives`);
+console.log(`📊 Processing ${imageUrls.length} images`);
 console.log(`🏢 Your brand: ${yourBrand}\n`);
 
 const OPENROUTER_KEY = openrouterApiKey || process.env.OPENROUTER_API_KEY;
@@ -27,14 +27,12 @@ const OPENAI_KEY = openaiApiKey || process.env.OPENAI_API_KEY;
 
 const results = [];
 
-for (let i = 0; i < creatives.length; i++) {
-    const creative = creatives[i];
-    const { adId, imageUrl } = creative;
-    const itemId = `ad-${adId}`;
+for (let i = 0; i < imageUrls.length; i++) {
+    const imageUrl = imageUrls[i];
+    const itemId = `creative-${i + 1}`;
     
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`🔄 Processing ${i + 1}/${creatives.length}`);
-    console.log(`📋 Ad ID: ${adId}`);
+    console.log(`🔄 Processing ${i + 1}/${imageUrls.length}`);
     console.log(`📷 Image: ${imageUrl.substring(0, 60)}...`);
     
     try {
@@ -99,7 +97,6 @@ for (let i = 0; i < creatives.length; i++) {
         
         results.push({
             itemId,
-            adId,
             originalUrl: imageUrl,
             status: 'error',
             error: error.message

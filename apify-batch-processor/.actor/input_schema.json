@@ -3,16 +3,14 @@
   "type": "object",
   "schemaVersion": 1,
   "properties": {
-    "creatives": {
-      "title": "Creatives to Process",
+    "imageUrls": {
+      "title": "Image URLs",
       "type": "array",
-      "description": "List of creatives from Google Sheets (Ad ID + Image URL pairs)",
-      "editor": "json",
+      "description": "List of competitor creative image URLs from Google Sheets",
+      "editor": "stringList",
       "example": [
-        {
-          "adId": "discovered_1762441363500_25",
-          "imageUrl": "https://scontent.xx.fbcdn.net/v/t45.1600-4/..."
-        }
+        "https://scontent.xx.fbcdn.net/v/t39.35426-6/...",
+        "https://scontent.xx.fbcdn.net/v/t45.1600-4/..."
       ],
       "prefill": []
     },
@@ -39,6 +37,6 @@
       "isSecret": true
     }
   },
-  "required": ["creatives"]
+  "required": ["imageUrls"]
 }
 
