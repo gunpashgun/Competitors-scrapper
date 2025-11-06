@@ -331,9 +331,16 @@ async function removeTextWithOpenAI(imageBuffer, maskBuffer, imageMeta, analysis
         }
     );
     
-    // Download result
-    const resultUrl = response.data.data[0].url;
-    const resultBuffer = await downloadImage(resultUrl);
+    // Download result - handle both URL and base64
+    let resultBuffer;
+    if (response.data.data[0].url) {
+        const resultUrl = response.data.data[0].url;
+        resultBuffer = await downloadImage(resultUrl);
+    } else if (response.data.data[0].b64_json) {
+        resultBuffer = Buffer.from(response.data.data[0].b64_json, 'base64');
+    } else {
+        throw new Error('No image data in OpenAI response');
+    }
     
     // Resize back to original dimensions
     const aspectRatio = imageMeta.width / imageMeta.height;
