@@ -174,6 +174,12 @@
     
     <div class="form-group">
       <label for="datasetJson">📋 Apify Dataset JSON</label>
+      <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+        <button class="btn btn-primary" id="autoLoadBtn" style="flex: 0 0 auto; width: auto; padding: 8px 16px;">
+          🔄 Auto-Load Latest
+        </button>
+        <input type="text" id="webhookUrl" placeholder="http://localhost:3000/latest-creatives" style="flex: 1;">
+      </div>
       <textarea id="datasetJson" placeholder='[
   {
     "itemId": "creative-1",
@@ -183,7 +189,7 @@
   ...
 ]'></textarea>
       <div class="helper-text">
-        Paste the full JSON array from Apify Dataset (Storage → Datasets → Download JSON)
+        Paste JSON manually OR click "Auto-Load Latest" to fetch from webhook server
       </div>
     </div>
     
@@ -247,6 +253,10 @@
     const gridColumns = document.getElementById('gridColumns');
     const gridSpacing = document.getElementById('gridSpacing');
     
+    // Auto-load elements
+    const autoLoadBtn = document.getElementById('autoLoadBtn');
+    const webhookUrl = document.getElementById('webhookUrl');
+    
     // Surprise Me elements
     const surpriseMeBtn = document.getElementById('surpriseMeBtn');
     const characterDesc = document.getElementById('characterDesc');
@@ -263,6 +273,40 @@
     function hideStatus() {
       status.style.display = 'none';
     }
+    
+    // Auto-load button handler
+    autoLoadBtn.addEventListener('click', async () => {
+      hideStatus();
+      
+      const url = webhookUrl.value.trim() || 'http://localhost:3000/latest-creatives';
+      
+      showStatus('⏳ Loading from webhook server...', 'loading');
+      autoLoadBtn.disabled = true;
+      
+      try {
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error('Failed to load: ' + response.statusText);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.creatives || !Array.isArray(data.creatives)) {
+          throw new Error('Invalid response format');
+        }
+        
+        // Auto-fill textarea
+        datasetJson.value = JSON.stringify(data.creatives, null, 2);
+        
+        showStatus('✅ Loaded ' + data.creatives.length + ' creatives from Run ' + data.runId, 'success');
+        autoLoadBtn.disabled = false;
+        
+      } catch (error) {
+        showStatus('❌ Auto-load failed: ' + error.message + '. Make sure webhook server is running!', 'error');
+        autoLoadBtn.disabled = false;
+      }
+    });
     
     generateBtn.addEventListener('click', () => {
       hideStatus();

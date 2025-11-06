@@ -113,12 +113,34 @@ console.log('\n━━━━━━━━━━━━━━━━━━━━━�
 console.log('✅ Batch processing complete!');
 console.log(`📊 Success: ${results.filter(r => r.status === 'success').length}/${results.length}`);
 
-await Actor.setValue('OUTPUT', {
+// Store results
+const output = {
     totalProcessed: results.length,
     successful: results.filter(r => r.status === 'success').length,
     failed: results.filter(r => r.status === 'error').length,
     results
-});
+};
+
+await Actor.setValue('OUTPUT', output);
+
+// Optional: Auto-export for Figma
+const FIGMA_AUTO_EXPORT = process.env.FIGMA_AUTO_EXPORT === 'true';
+if (FIGMA_AUTO_EXPORT) {
+    console.log('\n📦 Auto-exporting for Figma...');
+    const successfulResults = results.filter(r => r.status === 'success');
+    
+    // Export as Figma-compatible JSON
+    const figmaExport = successfulResults.map(r => ({
+        itemId: r.itemId,
+        cleanImageBase64: r.cleanImageBase64,
+        layoutData: r.layoutData,
+        originalUrl: r.originalUrl
+    }));
+    
+    await Actor.setValue('FIGMA_EXPORT', figmaExport);
+    console.log(`✅ Exported ${figmaExport.length} creatives for Figma`);
+    console.log('📋 Use this data in Figma plugin or download via API');
+}
 
 await Actor.exit();
 

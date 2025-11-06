@@ -11,9 +11,11 @@
  *   node apify-to-figma.js --json dataset.json
  */
 
-require('dotenv').config();
-const axios = require('axios');
-const fs = require('fs').promises;
+import dotenv from 'dotenv';
+import axios from 'axios';
+import { promises as fs } from 'fs';
+
+dotenv.config();
 
 // Configuration
 const FIGMA_TOKEN = process.env.FIGMA_ACCESS_TOKEN;
@@ -126,25 +128,22 @@ function generateCreativeNodes(data, xOffset = 0, yOffset = 0) {
 async function createCreativesInFigma(dataset, options = {}) {
   const { columns = 2, spacing = 100 } = options;
   
-  console.log('\n🎨 Creating creatives in Figma...');
+  console.log('\n🎨 Preparing creatives for Figma...');
   console.log(`📐 Grid: ${columns} columns, ${spacing}px spacing`);
   console.log(`📊 Total creatives: ${dataset.length}\n`);
   
-  // Get file structure
-  const fileResponse = await figmaApi.get(`/files/${FIGMA_FILE_ID}`);
-  const file = fileResponse.data;
-  
-  console.log(`📄 File: ${file.name}`);
-  console.log(`📄 File ID: ${FIGMA_FILE_ID}`);
-  
-  // Find the first page
-  const pages = file.document.children.filter(node => node.type === 'CANVAS');
-  if (pages.length === 0) {
-    throw new Error('No pages found in Figma file');
+  // Try to get file structure (optional)
+  let fileName = 'Unknown';
+  try {
+    const fileResponse = await figmaApi.get(`/files/${FIGMA_FILE_ID}`);
+    const file = fileResponse.data;
+    fileName = file.name;
+    console.log(`📄 Figma File: ${file.name}`);
+    console.log(`📄 File ID: ${FIGMA_FILE_ID}\n`);
+  } catch (error) {
+    console.log(`⚠️  Could not connect to Figma API (token may be expired)`);
+    console.log(`📄 File ID: ${FIGMA_FILE_ID}\n`);
   }
-  
-  const targetPage = pages[0];
-  console.log(`📄 Target page: ${targetPage.name}`);
   
   // IMPORTANT: Figma REST API has read-only access for most operations
   // Writing nodes requires Figma Plugin API or manual actions
@@ -240,9 +239,7 @@ async function main() {
 }
 
 // Run if called directly
-if (require.main === module) {
-  main();
-}
+main();
 
-module.exports = { loadDataset, createCreativesInFigma };
+export { loadDataset, createCreativesInFigma };
 
