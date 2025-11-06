@@ -7,25 +7,19 @@ await Actor.init();
 
 const input = await Actor.getInput();
 const {
-    adIds = [],
-    imageUrls = [],
+    creatives = [],
     yourBrand = 'YourBrand',
     openrouterApiKey,
     openaiApiKey
 } = input;
 
-// Determine input source
-const useAdIds = adIds.length > 0;
-const sources = useAdIds ? adIds : imageUrls;
-
-if (sources.length === 0) {
-    console.error('❌ Error: Please provide either adIds or imageUrls');
-    await Actor.fail('No input provided');
+if (creatives.length === 0) {
+    console.error('❌ Error: Please provide creatives array with adId and imageUrl');
+    await Actor.fail('No creatives provided');
 }
 
 console.log('🎨 Creative Batch Processor Started');
-console.log(`📊 Input type: ${useAdIds ? 'Ad IDs' : 'Image URLs'}`);
-console.log(`📊 Processing ${sources.length} creatives`);
+console.log(`📊 Processing ${creatives.length} creatives`);
 console.log(`🏢 Your brand: ${yourBrand}\n`);
 
 const OPENROUTER_KEY = openrouterApiKey || process.env.OPENROUTER_API_KEY;
@@ -33,24 +27,17 @@ const OPENAI_KEY = openaiApiKey || process.env.OPENAI_API_KEY;
 
 const results = [];
 
-for (let i = 0; i < sources.length; i++) {
-    const source = sources[i];
-    const itemId = useAdIds ? `ad-${source}` : `creative-${i + 1}`;
+for (let i = 0; i < creatives.length; i++) {
+    const creative = creatives[i];
+    const { adId, imageUrl } = creative;
+    const itemId = `ad-${adId}`;
     
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`🔄 Processing ${i + 1}/${sources.length}`);
-    console.log(`📋 ${useAdIds ? 'Ad ID' : 'URL'}: ${source.toString().substring(0, 60)}...`);
+    console.log(`🔄 Processing ${i + 1}/${creatives.length}`);
+    console.log(`📋 Ad ID: ${adId}`);
+    console.log(`📷 Image: ${imageUrl.substring(0, 60)}...`);
     
     try {
-        // Step 0: Get image URL from Ad ID if needed
-        let imageUrl;
-        if (useAdIds) {
-            console.log('\n🔍 Step 0: Fetching image URL from Meta Ad Library...');
-            imageUrl = await fetchImageFromAdId(source);
-            console.log(`✅ Image URL found: ${imageUrl.substring(0, 60)}...`);
-        } else {
-            imageUrl = source;
-        }
         
         // Step 1: Analyze with GPT-4o Vision
         console.log('\n📊 Step 1: Analyzing with GPT-4o Vision...');
@@ -112,7 +99,8 @@ for (let i = 0; i < sources.length; i++) {
         
         results.push({
             itemId,
-            adId: useAdIds ? source : null,
+            adId,
+            originalUrl: imageUrl,
             status: 'error',
             error: error.message
         });

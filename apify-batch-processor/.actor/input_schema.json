@@ -3,24 +3,16 @@
   "type": "object",
   "schemaVersion": 1,
   "properties": {
-    "adIds": {
-      "title": "Facebook Ad IDs",
+    "creatives": {
+      "title": "Creatives to Process",
       "type": "array",
-      "description": "List of Facebook Ad Library IDs to process (from Scraper output)",
-      "editor": "stringList",
+      "description": "List of creatives from Google Sheets (Ad ID + Image URL pairs)",
+      "editor": "json",
       "example": [
-        "1234567890123456",
-        "6543210987654321"
-      ],
-      "prefill": []
-    },
-    "imageUrls": {
-      "title": "Image URLs (Alternative)",
-      "type": "array",
-      "description": "Alternative: Direct image URLs if you don't have Ad IDs",
-      "editor": "stringList",
-      "example": [
-        "https://scontent.xx.fbcdn.net/v/..."
+        {
+          "adId": "discovered_1762441363500_25",
+          "imageUrl": "https://scontent.xx.fbcdn.net/v/t45.1600-4/..."
+        }
       ],
       "prefill": []
     },
@@ -47,6 +39,6 @@
       "isSecret": true
     }
   },
-  "required": []
+  "required": ["creatives"]
 }
 
