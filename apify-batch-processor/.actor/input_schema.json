@@ -1,0 +1,42 @@
+{
+  "title": "Creative Batch Processor Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "imageUrls": {
+      "title": "Image URLs",
+      "type": "array",
+      "description": "List of competitor creative image URLs to process",
+      "editor": "stringList",
+      "example": [
+        "https://scontent.xx.fbcdn.net/v/...",
+        "https://scontent.xx.fbcdn.net/v/..."
+      ],
+      "prefill": []
+    },
+    "yourBrand": {
+      "title": "Your Brand Name",
+      "type": "string",
+      "description": "Your brand name to replace competitor logos",
+      "editor": "textfield",
+      "example": "Algonova",
+      "default": "YourBrand"
+    },
+    "openrouterApiKey": {
+      "title": "OpenRouter API Key (Optional)",
+      "type": "string",
+      "description": "Override environment variable. Get key at: https://openrouter.ai/keys",
+      "editor": "textfield",
+      "isSecret": true
+    },
+    "openaiApiKey": {
+      "title": "OpenAI API Key (Optional)",
+      "type": "string",
+      "description": "Override environment variable. Get key at: https://platform.openai.com/api-keys",
+      "editor": "textfield",
+      "isSecret": true
+    }
+  },
+  "required": ["imageUrls"]
+}
+

@@ -1,0 +1,63 @@
+{
+  "actorSpecification": 1,
+  "name": "creative-batch-processor",
+  "title": "Creative Batch Processor",
+  "description": "Process multiple competitor creatives: analyze with GPT-4o Vision, remove text with OpenAI gpt-image-1, generate Figma layouts",
+  "version": "1.0",
+  "meta": {
+    "templateId": "node-puppeteer"
+  },
+  "input": "./input_schema.json",
+  "dockerfile": "./Dockerfile",
+  "readme": "./README.md",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "Processed Creatives",
+      "views": {
+        "overview": {
+          "title": "Overview",
+          "transformation": {
+            "fields": [
+              "itemId",
+              "status",
+              "originalUrl"
+            ]
+          },
+          "display": {
+            "component": "table",
+            "properties": {
+              "itemId": {
+                "label": "Item ID",
+                "format": "text"
+              },
+              "status": {
+                "label": "Status",
+                "format": "text"
+              },
+              "originalUrl": {
+                "label": "Original URL",
+                "format": "link"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "environmentVariables": {
+    "OPENROUTER_API_KEY": {
+      "title": "OpenRouter API Key",
+      "type": "string",
+      "description": "API key for OpenRouter (GPT-4o Vision)",
+      "isSecret": true
+    },
+    "OPENAI_API_KEY": {
+      "title": "OpenAI API Key",
+      "type": "string",
+      "description": "API key for OpenAI (gpt-image-1)",
+      "isSecret": true
+    }
+  }
+}
+
