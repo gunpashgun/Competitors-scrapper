@@ -1,18 +1,59 @@
 {
-    "title": "PuppeteerCrawler Template",
+    "title": "Facebook Ads Competitor Scraper",
     "type": "object",
     "schemaVersion": 1,
     "properties": {
-        "startUrls": {
-            "title": "Start URLs",
-            "type": "array",
-            "description": "URLs to start with.",
-            "editor": "requestListSources",
-            "prefill": [
-                {
-                    "url": "https://apify.com"
-                }
-            ]
+        "searchTerms": {
+            "title": "Search Terms",
+            "type": "string",
+            "description": "Search terms for Facebook Ads Library (one per line)",
+            "editor": "textarea",
+            "example": "kursus coding anak\nbelajar programming anak\ncoding untuk anak"
+        },
+        "country": {
+            "title": "Country",
+            "type": "string",
+            "description": "Two-letter country code",
+            "editor": "textfield",
+            "default": "ID",
+            "example": "ID"
+        },
+        "maxPages": {
+            "title": "Max Pages",
+            "type": "integer",
+            "description": "Maximum number of pages to scrape",
+            "editor": "number",
+            "default": 10,
+            "minimum": 1
+        },
+        "minActiveDays": {
+            "title": "Min Active Days",
+            "type": "integer",
+            "description": "Minimum number of days an ad must be active",
+            "editor": "number",
+            "default": 7,
+            "minimum": 1
+        },
+        "useProxy": {
+            "title": "Use Proxy",
+            "type": "boolean",
+            "description": "Use residential proxy for scraping",
+            "editor": "checkbox",
+            "default": false
+        },
+        "saveMediaAssets": {
+            "title": "Save Media Assets",
+            "type": "boolean",
+            "description": "Save image and video URLs",
+            "editor": "checkbox",
+            "default": true
+        },
+        "highResolutionOnly": {
+            "title": "High Resolution Only",
+            "type": "boolean",
+            "description": "Only save high-resolution images",
+            "editor": "checkbox",
+            "default": true
         }
     }
 }
