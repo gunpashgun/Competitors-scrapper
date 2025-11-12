@@ -3,20 +3,32 @@
     "type": "object",
     "schemaVersion": 1,
     "properties": {
+        "competitorUrls": {
+            "title": "Competitor URLs",
+            "type": "array",
+            "description": "List of competitors with their Facebook Ads Library URLs (recommended)",
+            "editor": "json",
+            "example": [
+                {
+                    "name": "Competitor Name",
+                    "url": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=ID&q=CompetitorName&search_type=page",
+                    "facebookPageUrl": "https://www.facebook.com/competitorpage"
+                }
+            ]
+        },
         "searchTerms": {
-            "title": "Search Terms",
+            "title": "Search Terms (fallback)",
             "type": "string",
-            "description": "Search terms for Facebook Ads Library (one per line)",
+            "description": "Search terms for Facebook Ads Library if not using competitorUrls (one per line)",
             "editor": "textarea",
-            "example": "kursus coding anak\nbelajar programming anak\ncoding untuk anak"
+            "example": "kursus coding anak\\nbelajar programming anak"
         },
         "country": {
             "title": "Country",
             "type": "string",
             "description": "Two-letter country code",
             "editor": "textfield",
-            "default": "ID",
-            "example": "ID"
+            "default": "ID"
         },
         "maxPages": {
             "title": "Max Pages",
@@ -54,6 +66,40 @@
             "description": "Only save high-resolution images",
             "editor": "checkbox",
             "default": true
+        },
+        "enableEngagementMatching": {
+            "title": "Enable Engagement Matching",
+            "type": "boolean",
+            "description": "Match ads with Facebook page posts to get engagement metrics (slower)",
+            "editor": "checkbox",
+            "default": false
+        },
+        "enableGoogleSheets": {
+            "title": "Enable Google Sheets Export",
+            "type": "boolean",
+            "description": "Export results to Google Sheets",
+            "editor": "checkbox",
+            "default": false
+        },
+        "googleSheetsSpreadsheetId": {
+            "title": "Google Sheets Spreadsheet ID",
+            "type": "string",
+            "description": "ID of the Google Spreadsheet (from URL)",
+            "editor": "textfield"
+        },
+        "googleSheetsName": {
+            "title": "Google Sheets Name",
+            "type": "string",
+            "description": "Name prefix for sheets (each competitor gets own sheet)",
+            "editor": "textfield",
+            "default": "Competitor Ads"
+        },
+        "googleServiceAccountKey": {
+            "title": "Google Service Account Key",
+            "type": "string",
+            "description": "Google Service Account JSON key (for Sheets API)",
+            "editor": "json",
+            "isSecret": true
         }
     }
 }
