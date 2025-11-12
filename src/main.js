@@ -2162,7 +2162,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                     fields: 'gridProperties.frozenRowCount'
                 }
             },
-            // Set width for Image Preview column (A)
+            // Set width for Image Preview column (A) - увеличено в 2 раза для лучшей видимости
             {
                 updateDimensionProperties: {
                     range: {
@@ -2172,7 +2172,7 @@ async function exportCompetitorData(sheets, spreadsheetId, sheetName, sheetId, d
                         endIndex: 1
                     },
                     properties: {
-                        pixelSize: 150
+                        pixelSize: 300
                     },
                     fields: 'pixelSize'
                 }
