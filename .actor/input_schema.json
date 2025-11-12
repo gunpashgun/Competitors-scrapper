@@ -98,7 +98,7 @@
             "title": "Google Service Account Key",
             "type": "string",
             "description": "Google Service Account JSON key (for Sheets API)",
-            "editor": "json",
+            "editor": "textarea",
             "isSecret": true
         }
     }
