@@ -1854,6 +1854,9 @@ async function matchAdsToOrganicPosts(ads, organicPosts) {
 async function saveToSupabase(ads, supabaseUrl, supabaseKey) {
     try {
         console.log('💾 Starting Supabase integration...');
+        console.log(`🔍 DEBUG: Received ${ads?.length || 0} ads`);
+        console.log(`🔍 DEBUG: supabaseUrl = ${supabaseUrl ? 'PROVIDED' : 'MISSING'}`);
+        console.log(`🔍 DEBUG: supabaseKey = ${supabaseKey ? 'PROVIDED (length: ' + supabaseKey.length + ')' : 'MISSING'}`);
         
         if (!supabaseUrl || !supabaseKey) {
             console.log('⚠️ Supabase credentials not provided. Skipping Supabase storage.');
@@ -1861,15 +1864,29 @@ async function saveToSupabase(ads, supabaseUrl, supabaseKey) {
         }
 
         // Initialize Supabase client
+        console.log('🔌 Initializing Supabase client...');
         const supabase = createClient(supabaseUrl, supabaseKey);
+        console.log('✅ Supabase client created');
         
         // Filter ads with 10-20 active days
+        console.log('🔍 Filtering ads by active days (10-20)...');
         const targetAds = ads.filter(ad => {
             const activeDays = ad.activeDays || 0;
             return activeDays >= 10 && activeDays <= 20;
         });
         
         console.log(`📊 Found ${targetAds.length} creatives with 10-20 active days (из ${ads.length} total)`);
+        
+        // DEBUG: Show sample ad data
+        if (targetAds.length > 0) {
+            const sampleAd = targetAds[0];
+            console.log(`🔍 DEBUG: Sample ad data:`);
+            console.log(`  - adId: ${sampleAd.adId || 'N/A'}`);
+            console.log(`  - competitorName: ${sampleAd.competitorName || 'N/A'}`);
+            console.log(`  - activeDays: ${sampleAd.activeDays || 'N/A'}`);
+            console.log(`  - imageUrl: ${sampleAd.imageUrl ? 'EXISTS' : 'N/A'}`);
+            console.log(`  - allImageUrls: ${sampleAd.allImageUrls?.length || 0} images`);
+        }
         
         if (targetAds.length === 0) {
             console.log('ℹ️ No creatives in 10-20 days range. Skipping Supabase upload.');
@@ -1909,23 +1926,30 @@ async function saveToSupabase(ads, supabaseUrl, supabaseKey) {
                     ? ad.allImageUrls[0] 
                     : (ad.imageUrl || '');
                 
+                console.log(`🔍 DEBUG: Processing ad ${ad.adId || 'unknown'}`);
+                console.log(`  - Original image URL: ${originalImageUrl ? originalImageUrl.substring(0, 100) + '...' : 'N/A'}`);
+                
                 let storedImageUrl = originalImageUrl;
                 
                 // Download and upload image if URL exists
                 if (originalImageUrl && originalImageUrl.startsWith('http')) {
                     try {
+                        console.log(`📥 Downloading image for ${ad.adId}...`);
                         // Download image
                         const response = await fetch(originalImageUrl);
                         if (!response.ok) throw new Error(`HTTP ${response.status}`);
                         
                         const arrayBuffer = await response.arrayBuffer();
                         const buffer = Buffer.from(arrayBuffer);
+                        console.log(`✅ Downloaded ${buffer.length} bytes`);
                         
                         // Generate unique filename
                         const adId = ad.adId || ad.libraryId || `unknown_${Date.now()}`;
                         const ext = originalImageUrl.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i)?.[1] || 'jpg';
                         const fileName = `${adId.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${ext}`;
                         const filePath = `${ad.competitorName || 'unknown'}/${fileName}`;
+                        
+                        console.log(`📤 Uploading to Supabase: ${filePath}`);
                         
                         // Upload to Supabase Storage
                         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -1934,6 +1958,8 @@ async function saveToSupabase(ads, supabaseUrl, supabaseKey) {
                                 contentType: `image/${ext}`,
                                 upsert: true
                             });
+                        
+                        console.log(`🔍 DEBUG: Upload result - error: ${uploadError ? uploadError.message : 'none'}, data: ${uploadData ? 'exists' : 'null'}`);
                         
                         if (uploadError) {
                             console.warn(`⚠️ Failed to upload image for ${adId}:`, uploadError.message);
@@ -2495,21 +2521,30 @@ console.log('🎉 Competitor ads collection completed!');
 console.log('📊 Collected all active ads from specified competitors');
 
 // Save to Supabase if enabled (only 10-20 active days creatives)
+console.log('🔍 DEBUG: Checking enableSupabase flag:', enableSupabase);
 if (enableSupabase) {
     console.log('💾 Preparing to save creatives to Supabase...');
+    console.log('🔍 DEBUG: enableSupabase = true');
+    console.log('🔍 DEBUG: supabaseUrl =', supabaseUrl);
+    console.log('🔍 DEBUG: supabaseKey length =', supabaseKey ? supabaseKey.length : 0);
     
     try {
         // Get all data from the dataset
         const dataset = await Actor.openDataset();
         const { items } = await dataset.getData();
         
+        console.log(`🔍 DEBUG: Retrieved ${items.length} items from dataset`);
+        
         // Filter out error entries
         const validAds = items.filter(item => !item.error && item.advertiserName);
+        
+        console.log(`🔍 DEBUG: Filtered to ${validAds.length} valid ads`);
         
         if (validAds.length > 0) {
             console.log(`📋 Processing ${validAds.length} ads for Supabase (filtering 10-20 days)...`);
             
             // Save to Supabase
+            console.log('🔍 DEBUG: Calling saveToSupabase function...');
             const supabaseSuccess = await saveToSupabase(
                 validAds,
                 supabaseUrl,
