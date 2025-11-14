@@ -100,6 +100,27 @@
             "description": "Google Service Account JSON key (for Sheets API)",
             "editor": "textarea",
             "isSecret": true
+        },
+        "enableSupabase": {
+            "title": "Enable Supabase Storage",
+            "type": "boolean",
+            "description": "Save active creatives (10-20 days) to Supabase database",
+            "editor": "checkbox",
+            "default": false
+        },
+        "supabaseUrl": {
+            "title": "Supabase URL",
+            "type": "string",
+            "description": "Your Supabase project URL",
+            "editor": "textfield",
+            "example": "https://your-project.supabase.co"
+        },
+        "supabaseKey": {
+            "title": "Supabase Anon Key",
+            "type": "string",
+            "description": "Your Supabase anon/public key",
+            "editor": "textfield",
+            "isSecret": true
         }
     }
 }

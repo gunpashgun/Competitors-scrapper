@@ -1,6 +1,7 @@
 import { Actor } from 'apify';
 import { PuppeteerCrawler } from 'crawlee';
 import { google } from 'googleapis';
+import { createClient } from '@supabase/supabase-js';
 
 await Actor.init();
 
@@ -18,7 +19,10 @@ const {
     enableGoogleSheets = false,
     googleSheetsSpreadsheetId = '',
     googleSheetsName = 'Competitor Ads',
-    googleServiceAccountKey = ''
+    googleServiceAccountKey = '',
+    enableSupabase = false,
+    supabaseUrl = '',
+    supabaseKey = ''
 } = input ?? {};
 
 // Parse search terms (fallback if no competitorUrls provided)
@@ -1846,6 +1850,83 @@ async function matchAdsToOrganicPosts(ads, organicPosts) {
     return ads;
 }
 
+// Supabase Integration - Save creatives with 10-20 active days
+async function saveToSupabase(ads, supabaseUrl, supabaseKey) {
+    try {
+        console.log('💾 Starting Supabase integration...');
+        
+        if (!supabaseUrl || !supabaseKey) {
+            console.log('⚠️ Supabase credentials not provided. Skipping Supabase storage.');
+            return false;
+        }
+
+        // Initialize Supabase client
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        // Filter ads with 10-20 active days
+        const targetAds = ads.filter(ad => {
+            const activeDays = ad.activeDays || 0;
+            return activeDays >= 10 && activeDays <= 20;
+        });
+        
+        console.log(`📊 Found ${targetAds.length} creatives with 10-20 active days (из ${ads.length} total)`);
+        
+        if (targetAds.length === 0) {
+            console.log('ℹ️ No creatives in 10-20 days range. Skipping Supabase upload.');
+            return true;
+        }
+        
+        // Prepare data for Supabase
+        const creativesToSave = targetAds.map(ad => {
+            // Calculate launch date (today - active days)
+            const launchDate = new Date();
+            launchDate.setDate(launchDate.getDate() - (ad.activeDays || 0));
+            
+            // Get first image URL
+            const imageUrl = Array.isArray(ad.allImageUrls) && ad.allImageUrls.length > 0 
+                ? ad.allImageUrls[0] 
+                : (ad.imageUrl || '');
+            
+            return {
+                competitor_name: ad.competitorName || ad.searchTerm || 'Unknown',
+                ad_id: ad.adId || ad.libraryId || `unknown_${Date.now()}`,
+                launch_date: launchDate.toISOString().split('T')[0], // YYYY-MM-DD format
+                active_days: ad.activeDays || 0,
+                image_url: imageUrl,
+                ad_text: ad.adText || '',
+                landing_page_url: ad.landingPageUrl || '',
+                cta_button: ad.ctaButtonText || '',
+                advertiser_name: ad.advertiserName || ''
+            };
+        });
+        
+        // Insert data into Supabase (using upsert to handle duplicates)
+        console.log(`📤 Uploading ${creativesToSave.length} creatives to Supabase...`);
+        
+        const { data, error } = await supabase
+            .from('competitor_creatives')
+            .upsert(creativesToSave, {
+                onConflict: 'ad_id', // Update if ad_id already exists
+                ignoreDuplicates: false // Update existing records
+            })
+            .select();
+        
+        if (error) {
+            console.error('❌ Supabase error:', error.message);
+            return false;
+        }
+        
+        console.log(`✅ Successfully saved ${data?.length || creativesToSave.length} creatives to Supabase!`);
+        console.log(`📊 Table: competitor_creatives`);
+        console.log(`🔗 URL: ${supabaseUrl}`);
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Error during Supabase upload:', error.message);
+        return false;
+    }
+}
+
 // Google Sheets Integration - Export each competitor to separate sheet
 async function exportToGoogleSheetsByCompetitor(adsByCompetitor, spreadsheetId, serviceAccountKey) {
     try {
@@ -2337,6 +2418,44 @@ await crawler.run();
 
 console.log('🎉 Competitor ads collection completed!');
 console.log('📊 Collected all active ads from specified competitors');
+
+// Save to Supabase if enabled (only 10-20 active days creatives)
+if (enableSupabase) {
+    console.log('💾 Preparing to save creatives to Supabase...');
+    
+    try {
+        // Get all data from the dataset
+        const dataset = await Actor.openDataset();
+        const { items } = await dataset.getData();
+        
+        // Filter out error entries
+        const validAds = items.filter(item => !item.error && item.advertiserName);
+        
+        if (validAds.length > 0) {
+            console.log(`📋 Processing ${validAds.length} ads for Supabase (filtering 10-20 days)...`);
+            
+            // Save to Supabase
+            const supabaseSuccess = await saveToSupabase(
+                validAds,
+                supabaseUrl,
+                supabaseKey
+            );
+            
+            if (supabaseSuccess) {
+                console.log('✅ Creatives successfully saved to Supabase!');
+            } else {
+                console.log('⚠️ Supabase save failed. Data is still in Apify Dataset.');
+            }
+        } else {
+            console.log('⚠️ No valid ads found to save to Supabase');
+        }
+    } catch (error) {
+        console.error('❌ Error during Supabase save:', error.message);
+        console.log('💾 Data is still available in Apify Dataset');
+    }
+} else {
+    console.log('ℹ️ Supabase storage is disabled. Enable it in input settings to save creatives.');
+}
 
 // Export to Google Sheets if enabled
 if (enableGoogleSheets) {
