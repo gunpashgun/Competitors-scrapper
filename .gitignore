@@ -10,3 +10,10 @@ temp/
 *.psd
 *.sketch
 
+# Config files with secrets
+COMPETITORS_CONFIG.json
+APIFY_INPUT_READY.json
+READY_TO_USE_INPUT.json
+COMPETITOR_URLS_INPUT.json
+APIFY_INPUT_WITH_SUPABASE.json
+
