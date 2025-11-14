@@ -1876,48 +1876,123 @@ async function saveToSupabase(ads, supabaseUrl, supabaseKey) {
             return true;
         }
         
-        // Prepare data for Supabase
-        const creativesToSave = targetAds.map(ad => {
-            // Calculate launch date (today - active days)
-            const launchDate = new Date();
-            launchDate.setDate(launchDate.getDate() - (ad.activeDays || 0));
-            
-            // Get first image URL
-            const imageUrl = Array.isArray(ad.allImageUrls) && ad.allImageUrls.length > 0 
-                ? ad.allImageUrls[0] 
-                : (ad.imageUrl || '');
-            
-            return {
-                competitor_name: ad.competitorName || ad.searchTerm || 'Unknown',
-                ad_id: ad.adId || ad.libraryId || `unknown_${Date.now()}`,
-                launch_date: launchDate.toISOString().split('T')[0], // YYYY-MM-DD format
-                active_days: ad.activeDays || 0,
-                image_url: imageUrl,
-                ad_text: ad.adText || '',
-                landing_page_url: ad.landingPageUrl || '',
-                cta_button: ad.ctaButtonText || '',
-                advertiser_name: ad.advertiserName || ''
-            };
-        });
+        // Ensure storage bucket exists
+        const bucketName = 'competitor-creatives';
+        console.log(`📦 Checking storage bucket: ${bucketName}`);
         
-        // Insert data into Supabase (using upsert to handle duplicates)
-        console.log(`📤 Uploading ${creativesToSave.length} creatives to Supabase...`);
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const bucketExists = buckets?.some(b => b.name === bucketName);
+        
+        if (!bucketExists) {
+            console.log(`📦 Creating storage bucket: ${bucketName}`);
+            await supabase.storage.createBucket(bucketName, {
+                public: true,
+                fileSizeLimit: 10485760 // 10MB
+            });
+        }
+        
+        // Download and upload images to Supabase Storage
+        console.log(`🖼️ Downloading and uploading ${targetAds.length} images to Supabase Storage...`);
+        
+        const creativesToSave = [];
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const ad of targetAds) {
+            try {
+                // Calculate launch date (today - active days)
+                const launchDate = new Date();
+                launchDate.setDate(launchDate.getDate() - (ad.activeDays || 0));
+                
+                // Get first image URL
+                const originalImageUrl = Array.isArray(ad.allImageUrls) && ad.allImageUrls.length > 0 
+                    ? ad.allImageUrls[0] 
+                    : (ad.imageUrl || '');
+                
+                let storedImageUrl = originalImageUrl;
+                
+                // Download and upload image if URL exists
+                if (originalImageUrl && originalImageUrl.startsWith('http')) {
+                    try {
+                        // Download image
+                        const response = await fetch(originalImageUrl);
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        
+                        const arrayBuffer = await response.arrayBuffer();
+                        const buffer = Buffer.from(arrayBuffer);
+                        
+                        // Generate unique filename
+                        const adId = ad.adId || ad.libraryId || `unknown_${Date.now()}`;
+                        const ext = originalImageUrl.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i)?.[1] || 'jpg';
+                        const fileName = `${adId.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${ext}`;
+                        const filePath = `${ad.competitorName || 'unknown'}/${fileName}`;
+                        
+                        // Upload to Supabase Storage
+                        const { data: uploadData, error: uploadError } = await supabase.storage
+                            .from(bucketName)
+                            .upload(filePath, buffer, {
+                                contentType: `image/${ext}`,
+                                upsert: true
+                            });
+                        
+                        if (uploadError) {
+                            console.warn(`⚠️ Failed to upload image for ${adId}:`, uploadError.message);
+                        } else {
+                            // Get public URL
+                            const { data: urlData } = supabase.storage
+                                .from(bucketName)
+                                .getPublicUrl(filePath);
+                            
+                            storedImageUrl = urlData.publicUrl;
+                            successCount++;
+                            console.log(`✅ Uploaded: ${adId} → ${fileName}`);
+                        }
+                    } catch (imgError) {
+                        console.warn(`⚠️ Failed to download/upload image for ${ad.adId}:`, imgError.message);
+                        failCount++;
+                        // Keep original URL as fallback
+                    }
+                }
+                
+                creativesToSave.push({
+                    competitor_name: ad.competitorName || ad.searchTerm || 'Unknown',
+                    ad_id: ad.adId || ad.libraryId || `unknown_${Date.now()}`,
+                    launch_date: launchDate.toISOString().split('T')[0],
+                    active_days: ad.activeDays || 0,
+                    image_url: storedImageUrl,
+                    ad_text: ad.adText || '',
+                    landing_page_url: ad.landingPageUrl || '',
+                    cta_button: ad.ctaButtonText || '',
+                    advertiser_name: ad.advertiserName || ''
+                });
+                
+            } catch (adError) {
+                console.error(`❌ Error processing ad ${ad.adId}:`, adError.message);
+                failCount++;
+            }
+        }
+        
+        console.log(`📊 Image upload stats: ✅ ${successCount} success, ⚠️ ${failCount} failed`);
+        
+        // Insert data into Supabase table
+        console.log(`💾 Saving ${creativesToSave.length} records to database...`);
         
         const { data, error } = await supabase
             .from('competitor_creatives')
             .upsert(creativesToSave, {
-                onConflict: 'ad_id', // Update if ad_id already exists
-                ignoreDuplicates: false // Update existing records
+                onConflict: 'ad_id',
+                ignoreDuplicates: false
             })
             .select();
         
         if (error) {
-            console.error('❌ Supabase error:', error.message);
+            console.error('❌ Supabase database error:', error.message);
             return false;
         }
         
         console.log(`✅ Successfully saved ${data?.length || creativesToSave.length} creatives to Supabase!`);
         console.log(`📊 Table: competitor_creatives`);
+        console.log(`🖼️ Storage: ${bucketName}`);
         console.log(`🔗 URL: ${supabaseUrl}`);
         
         return true;
