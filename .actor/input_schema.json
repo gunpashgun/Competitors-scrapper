@@ -9,21 +9,7 @@
             "description": "List of competitors with their Facebook Ads Library URLs (recommended)",
             "editor": "json",
             "default": [],
-            "items": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string"
-                    },
-                    "url": {
-                        "type": "string"
-                    },
-                    "facebookPageUrl": {
-                        "type": "string"
-                    }
-                }
-            },
-            "example": [
+            "prefill": [
                 {
                     "name": "Competitor Name",
                     "url": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=ID&q=CompetitorName&search_type=page",
