@@ -1850,7 +1850,7 @@ async function matchAdsToOrganicPosts(ads, organicPosts) {
     return ads;
 }
 
-// Supabase Integration - Save creatives with 10-20 active days
+// Supabase Integration - Save ALL creatives (no filters)
 async function saveToSupabase(ads, supabaseUrl, supabaseKey) {
     try {
         console.log('💾 Starting Supabase integration...');
@@ -1868,14 +1868,11 @@ async function saveToSupabase(ads, supabaseUrl, supabaseKey) {
         const supabase = createClient(supabaseUrl, supabaseKey);
         console.log('✅ Supabase client created');
         
-        // Filter ads with 10-20 active days
-        console.log('🔍 Filtering ads by active days (10-20)...');
-        const targetAds = ads.filter(ad => {
-            const activeDays = ad.activeDays || 0;
-            return activeDays >= 10 && activeDays <= 20;
-        });
+        // Save ALL ads to Supabase (no filtering)
+        console.log('🔍 Processing all ads for Supabase (no active days filter)...');
+        const targetAds = ads; // Save everything
         
-        console.log(`📊 Found ${targetAds.length} creatives with 10-20 active days (из ${ads.length} total)`);
+        console.log(`📊 Saving ${targetAds.length} creatives to Supabase (all ads, no filter)`);
         
         // DEBUG: Show sample ad data
         if (targetAds.length > 0) {
@@ -1889,7 +1886,7 @@ async function saveToSupabase(ads, supabaseUrl, supabaseKey) {
         }
         
         if (targetAds.length === 0) {
-            console.log('ℹ️ No creatives in 10-20 days range. Skipping Supabase upload.');
+            console.log('ℹ️ No creatives found. Skipping Supabase upload.');
             return true;
         }
         
@@ -2541,7 +2538,7 @@ if (enableSupabase) {
         console.log(`🔍 DEBUG: Filtered to ${validAds.length} valid ads`);
         
         if (validAds.length > 0) {
-            console.log(`📋 Processing ${validAds.length} ads for Supabase (filtering 10-20 days)...`);
+            console.log(`📋 Processing ${validAds.length} ads for Supabase (all ads, no filter)...`);
             
             // Save to Supabase
             console.log('🔍 DEBUG: Calling saveToSupabase function...');
